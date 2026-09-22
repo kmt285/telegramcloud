@@ -2,7 +2,7 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 
 // 🔴 သင့် Render URL ဖြင့် အစားထိုးပါ
-const BACKEND_URL = "https://your-render-app-name.onrender.com"; 
+const BACKEND_URL = "https://telegramcloudbackend.onrender.com"; 
 
 let phoneHash = "";
 let userPhone = "";
