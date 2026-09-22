@@ -17,35 +17,71 @@ function switchStep(stepId) {
     document.getElementById(stepId).classList.remove("hidden");
 }
 
+let pollingInterval;
+
 function requestContact() {
-    tg.requestContact(async function(shared) {
+    tg.requestContact(function(shared) {
         if (shared) {
-            userPhone = tg.initDataUnsafe?.user?.phone;
-            if(!userPhone) return alert("ဖုန်းနံပါတ် ရယူ၍မရပါ။");
-            
+            // User က "Share" နှိပ်လိုက်သည်နှင့် Loading ပြမည်
             showLoading(true);
-            switchStep("step-loading"); // Loading ပြမည်
+            switchStep("step-loading");
             
-            try {
-                let res = await fetch(`${BACKEND_URL}/api/send_code`, {
-                    method: "POST", headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({ phone: userPhone })
-                });
-                let result = await res.json();
-                
-                showLoading(false);
-                if(result.success) {
-                    phoneHash = result.hash;
-                    switchStep("step-otp");
-                } else {
-                    alert("Error: " + result.message);
+            let userId = tg.initDataUnsafe?.user?.id;
+            
+            // Backend ဆီသို့ Contact ရောက်/မရောက် ၂ စက္ကန့်တစ်ခါ လှမ်းစစ်မည် (Polling)
+            pollingInterval = setInterval(() => checkContactReceived(userId), 2000);
+            
+            // ၁၅ စက္ကန့်ကြာသည်အထိ အကြောင်းပြန်မလာပါက ရပ်တန့်မည် (Timeout)
+            setTimeout(() => {
+                if(pollingInterval) {
+                    clearInterval(pollingInterval);
+                    showLoading(false);
+                    alert("Timeout: ဆာဗာနှင့် ချိတ်ဆက်မှု ကြန့်ကြာနေပါသည်။ ပြန်လည်ကြိုးစားပါ။");
                     switchStep("step-phone");
                 }
-            } catch(e) { showLoading(false); alert("Connection Failed"); }
+            }, 15000);
+        } else {
+            alert("Cloud သို့ ဝင်ရောက်ရန် ဖုန်းနံပါတ် မျှဝေရန် လိုအပ်ပါသည်။");
         }
     });
 }
 
+// နောက်ကွယ်မှ API ကို အဆက်မပြတ် လှမ်းစစ်မည့် Function
+async function checkContactReceived(userId) {
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/check_contact`, {
+            method: "POST", 
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ user_id: userId })
+        });
+        
+        let result = await res.json();
+        
+        if (result.success) {
+            // Backend တွင် ဖုန်းနံပါတ်ရပြီး OTP ပို့ပြီးသွားပါက
+            clearInterval(pollingInterval); // စစ်ဆေးနေခြင်းကို ရပ်မည်
+            pollingInterval = null;
+            
+            userPhone = result.phone;
+            phoneHash = result.hash;
+            
+            showLoading(false);
+            switchStep("step-otp"); // OTP ရိုက်ထည့်သည့် စာမျက်နှာသို့ ကူးပြောင်းမည်
+            tg.HapticFeedback.impactOccurred("medium");
+            
+        } else if (result.message) { 
+            // Pyrogram မှ OTP တောင်းရာတွင် Error တက်ခဲ့ပါက (ဥပမာ - Limit ကျော်နေခြင်း)
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+            showLoading(false);
+            alert("Error: " + result.message);
+            switchStep("step-phone");
+        }
+        // result.status == "waiting" ဖြစ်နေပါက အလုပ်ဆက်လုပ်စေရန် ဘာမှမရေးဘဲ ထားပါမည်
+    } catch(e) {
+        console.log("Waiting for backend...");
+    }
+}
 async function verifyOTP() {
     let code = document.getElementById("otp_input").value;
     if(code.length !== 5) return alert("OTP ၅ လုံး ပြည့်အောင် ရိုက်ပါ။");
