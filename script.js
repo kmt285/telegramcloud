@@ -22,21 +22,27 @@ let pollingInterval;
 function requestContact() {
     tg.requestContact(function(shared) {
         if (shared) {
-            // User က "Share" နှိပ်လိုက်သည်နှင့် Loading ပြမည်
             showLoading(true);
             switchStep("step-loading");
             
+            // 💡 ပြင်ဆင်ချက်: Telegram Object မှ User ID ကို သေချာစွာ ဆွဲယူခြင်း
             let userId = tg.initDataUnsafe?.user?.id;
             
-            // Backend ဆီသို့ Contact ရောက်/မရောက် ၂ စက္ကန့်တစ်ခါ လှမ်းစစ်မည် (Polling)
+            if (!userId) {
+                showLoading(false);
+                alert("Error: Telegram User ID ကို ဖတ်၍မရပါ။");
+                switchStep("step-phone");
+                return;
+            }
+            
+            // Backend ဆီသို့ ၂ စက္ကန့်တစ်ခါ လှမ်းစစ်မည်
             pollingInterval = setInterval(() => checkContactReceived(userId), 2000);
             
-            // ၁၅ စက္ကန့်ကြာသည်အထိ အကြောင်းပြန်မလာပါက ရပ်တန့်မည် (Timeout)
             setTimeout(() => {
                 if(pollingInterval) {
                     clearInterval(pollingInterval);
                     showLoading(false);
-                    alert("Timeout: ဆာဗာနှင့် ချိတ်ဆက်မှု ကြန့်ကြာနေပါသည်။ ပြန်လည်ကြိုးစားပါ။");
+                    alert("Timeout: အင်တာနက်ချိတ်ဆက်မှု ကြန့်ကြာနေပါသည်။ ပြန်လည်ကြိုးစားပါ။");
                     switchStep("step-phone");
                 }
             }, 15000);
