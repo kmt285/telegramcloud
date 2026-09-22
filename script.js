@@ -199,38 +199,13 @@ async function saveCloudNote() {
     btn.innerHTML = "<i class='fa-solid fa-paper-plane'></i>"; btn.disabled = false;
 }
 
-// 👁️ --- IN-APP MEDIA VIEWER (Mini App မပိတ်တော့ပါ) --- 👁️
-function openFile(msgId, type, title) {
-    tg.HapticFeedback.impactOccurred("light");
-    let viewer = document.getElementById("media-viewer");
-    let vContent = document.getElementById("viewer-content");
+// 🚀 --- TELEGRAM NATIVE VIEWER သို့ တိုက်ရိုက်ပို့ဆောင်ခြင်း (UX Magic) --- 🚀
+function openFile(msgId) {
+    tg.HapticFeedback.impactOccurred("medium");
     
-    document.getElementById("viewer-title").innerText = title;
-    viewer.classList.remove("hidden");
-    vContent.innerHTML = "<div class='modern-spinner'></div>"; 
-    
-    if (type === "photo") {
-        // Backend မှ Full Quality ဓာတ်ပုံကို လှမ်းခေါ်မည်
-        let imgUrl = `${BACKEND_URL}/api/media?name=${encodeURIComponent(userName)}&msg_id=${msgId}&thumb=0`;
-        vContent.innerHTML = `<img src="${imgUrl}" class="viewer-img" onload="this.style.opacity=1" style="opacity:0; transition:0.3s;" onerror="this.parentElement.innerHTML='<p>Failed to load image.</p>'"/>`;
-    } else if (type === "text") {
-        // Note အပြည့်အစုံကို ပြမည်
-        let file = allFilesData.find(f => f.id === msgId);
-        vContent.innerHTML = `<div class="viewer-text">${file.full_text || file.title}</div>`;
-    } else {
-        // ဖိုင်ကြီးများ (Document/Video) အတွက် တိုက်ရိုက် Download ချခိုင်းမည်
-        let fileUrl = `${BACKEND_URL}/api/media?name=${encodeURIComponent(userName)}&msg_id=${msgId}&thumb=0`;
-        vContent.innerHTML = `
-            <div class="viewer-doc">
-                <i class="fa-solid fa-file-lines text-blue" style="font-size:60px;"></i>
-                <p style="color:var(--text-muted);">Preview not supported.</p>
-                <a href="${fileUrl}" target="_blank" class="btn-primary" style="text-decoration:none;">Download File</a>
-            </div>
-        `;
-    }
-}
-
-function closeViewer() {
-    document.getElementById("media-viewer").classList.add("hidden");
-    document.getElementById("viewer-content").innerHTML = "";
+    fetch(`${BACKEND_URL}/api/view_file`, {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ name: userName, msg_id: msgId })
+    });
+    tg.close(); 
 }
