@@ -262,3 +262,109 @@ async function saveCloudNote() {
     btn.innerHTML = "<i class='fa-solid fa-arrow-up'></i>";
     btn.disabled = false;
 }
+
+let allFilesData = [];
+
+async function fetchCloudData() {
+    let statusText = document.getElementById("cloud-status");
+    let grid = document.getElementById("cloud-files-grid");
+    
+    statusText.innerText = "Syncing with Telegram Cloud...";
+    grid.innerHTML = "<div class='flex-center' style='grid-column: 1 / -1;'><div class='modern-spinner'></div></div>";
+    
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/get_cloud_data`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName })
+        });
+        let result = await res.json();
+        
+        if(result.success) {
+            allFilesData = result.files;
+            statusText.innerText = `${allFilesData.length} items synced.`;
+            renderFilesGrid(allFilesData);
+        } else {
+            statusText.innerText = "Sync failed.";
+        }
+    } catch(e) {
+        statusText.innerText = "Connection error.";
+    }
+}
+
+// 📁 Grid View ဖြင့် ပြသခြင်း
+function renderFilesGrid(files) {
+    let html = "";
+    if(files.length === 0) {
+        html = "<div class='flex-center' style='grid-column: 1 / -1; color: var(--text-muted);'><i class='fa-brands fa-google-drive mb-2' style='font-size:40px;'></i><p>Your drive is empty.</p></div>";
+    } else {
+        files.forEach(f => {
+            let icon = f.type === "doc" ? "fa-file-lines doc" : (f.type === "photo" ? "fa-image photo" : "fa-note-sticky text");
+            // ဖိုင်ကို နှိပ်လိုက်ပါက openFile() ကို ခေါ်မည်
+            html += `
+            <div class="file-card" onclick="openFile(${f.id})">
+                <i class="fa-solid ${icon} fc-icon"></i>
+                <div class="fc-title">${f.title}</div>
+                <div class="fc-meta">${f.size || f.date}</div>
+            </div>`;
+        });
+    }
+    document.getElementById("cloud-files-grid").innerHTML = html;
+}
+
+// 🔍 Search နှင့် Filter လုပ်ခြင်း
+function filterFiles(type, element) {
+    // Menu အပြောင်းအလဲ UI
+    document.querySelectorAll('.nav-links li, .nav-item').forEach(el => el.classList.remove('active'));
+    if(element) element.classList.add('active');
+    
+    let titles = { 'all': 'My Drive', 'photo': 'Photos', 'doc': 'Documents', 'text': 'Notes' };
+    document.getElementById('current-category').innerText = titles[type];
+    
+    let filtered = type === 'all' ? allFilesData : allFilesData.filter(f => f.type === type);
+    renderFilesGrid(filtered);
+}
+
+function searchFiles(query) {
+    let lowerQ = query.toLowerCase();
+    let filtered = allFilesData.filter(f => f.title.toLowerCase().includes(lowerQ));
+    renderFilesGrid(filtered);
+}
+
+// 🚀 Telegram Native Viewer ဖြင့် ဖိုင်ဖွင့်ခြင်း (UX Magic)
+async function openFile(msgId) {
+    tg.HapticFeedback.impactOccurred("light");
+    
+    // ဖိုင်ကို Bot Chat ထဲသို့ ပို့ရန် API လှမ်းခေါ်မည်
+    fetch(`${BACKEND_URL}/api/view_file`, {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ name: userName, msg_id: msgId })
+    });
+    
+    // API ခေါ်ပြီးသည်နှင့် Mini App ကို ချက်ချင်း ပိတ်ချလိုက်မည်
+    // ၎င်းအခါ အသုံးပြုသူသည် ၎င်းတို့၏ Telegram Chat သို့ ရောက်သွားပြီး ဖိုင်ကို Native အတိုင်း တန်းမြင်ရမည်
+    tg.close(); 
+}
+
+// 💾 Note အသစ်သိမ်းခြင်း
+async function saveCloudNote() {
+    let noteInput = document.getElementById("note_input");
+    let text = noteInput.value.trim();
+    if(!text) return;
+    
+    let btn = event.target.closest('button');
+    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>";
+    btn.disabled = true;
+    
+    try {
+        await fetch(`${BACKEND_URL}/api/upload_note`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, text: text })
+        });
+        noteInput.value = "";
+        tg.HapticFeedback.notificationOccurred("success");
+        fetchCloudData(); 
+    } catch(e) {}
+    
+    btn.innerHTML = "<i class='fa-solid fa-paper-plane'></i>";
+    btn.disabled = false;
+}
