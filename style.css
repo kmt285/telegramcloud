@@ -1,75 +1,57 @@
-body {
-    background-color: #0e1621;
-    color: white;
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-}
-.cloud-container {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    padding: 30px;
-    border-radius: 15px;
-    text-align: center;
-    width: 90%;
-    max-width: 350px;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-}
-.glow { color: #0088cc; text-shadow: 0 0 10px #0088cc; }
-.step { transition: opacity 0.3s; }
-.hidden { display: none; }
-.btn-primary {
-    background: #0088cc; color: white; border: none; padding: 12px 20px;
-    border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%;
-    margin-top: 15px; font-weight: bold;
-}
-.input-box {
-    width: 90%; padding: 12px; margin-top: 10px; border-radius: 8px;
-    border: none; text-align: center; font-size: 18px;
+:root {
+    --bg-color: #18181a;
+    --card-bg: #222226;
+    --primary-blue: #3390ec;
+    --text-main: #ffffff;
+    --text-muted: #8e8e93;
+    --border-color: rgba(255, 255, 255, 0.08);
 }
 
-/* CSS အဟောင်းများအောက်တွင် ထပ်ထည့်ရန် */
-.spinner {
-    border: 4px solid rgba(255, 255, 255, 0.1);
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border-left-color: #0088cc;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 15px auto;
-}
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; height: 100vh; overflow: hidden; }
 
-/* --- Personal Cloud Dashboard Styles --- */
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-}
-.dashboard-header h2 { margin: 0; font-size: 20px; color: #4CAF50; }
-.btn-refresh {
-    background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white;
-    padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;
-}
-.file-list {
-    max-height: 250px; overflow-y: auto; text-align: left;
-    margin-bottom: 15px; padding-right: 5px;
-}
-.file-item {
-    background: rgba(255, 255, 255, 0.05); padding: 12px;
-    border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center;
-    transition: background 0.2s;
-}
-.file-item:hover { background: rgba(255, 255, 255, 0.1); }
-.file-icon { font-size: 24px; margin-right: 15px; }
-.file-title { font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
-.file-meta { font-size: 11px; color: #888; margin-top: 3px; }
-.upload-area {
-    border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 15px;
-}
+.app-container { width: 100%; max-width: 480px; height: 100%; background: var(--card-bg); display: flex; flex-direction: column; position: relative; }
+.step { padding: 30px 20px; width: 100%; height: 100%; animation: fadeIn 0.4s ease; overflow-y: auto; }
+.hidden { display: none !important; }
+.flex-center { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Typography & Icons */
+.title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+.sub-text { color: var(--text-muted); font-size: 14px; line-height: 1.4; }
+.text-blue { color: var(--primary-blue); }
+.icon-header { font-size: 56px; margin-bottom: 20px; text-shadow: 0 4px 20px rgba(51, 144, 236, 0.4); }
+.mb-4 { margin-bottom: 24px; } .mt-3 { margin-top: 16px; } .mt-2 { margin-top: 8px; } .mr-2 { margin-right: 8px; } .w-100 { width: 100%; }
+
+/* Buttons & Inputs */
+.btn-primary { background: var(--primary-blue); color: #fff; border: none; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.btn-primary:active { background: #287dc9; }
+.input-box { width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: var(--text-main); padding: 16px; border-radius: 12px; font-size: 16px; transition: border 0.3s; }
+.input-box:focus { border-color: var(--primary-blue); outline: none; }
+.text-center { text-align: center; } .text-lg { font-size: 20px; letter-spacing: 2px; }
+
+/* Dashboard UI */
+.dashboard-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border-color); margin-bottom: 15px; }
+.dash-title { font-size: 20px; font-weight: 600; } .dash-sub { font-size: 12px; color: #4CAF50; margin-top: 4px; }
+.btn-icon { background: rgba(255,255,255,0.08); border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; }
+
+/* File List */
+.file-list { flex-grow: 1; overflow-y: auto; margin-bottom: 80px; }
+.file-item { display: flex; align-items: center; background: rgba(255,255,255,0.03); padding: 14px; border-radius: 14px; margin-bottom: 10px; border: 1px solid transparent; transition: 0.2s; }
+.file-item:active { background: rgba(255,255,255,0.08); }
+.f-icon { width: 40px; height: 40px; border-radius: 10px; background: rgba(51, 144, 236, 0.15); color: var(--primary-blue); display: flex; justify-content: center; align-items: center; font-size: 18px; margin-right: 14px; }
+.f-icon.doc { background: rgba(76, 175, 80, 0.15); color: #4CAF50; }
+.f-details { flex: 1; overflow: hidden; }
+.f-title { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.f-date { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+/* Upload Area */
+.upload-area { position: absolute; bottom: 0; left: 0; width: 100%; padding: 15px 20px; background: var(--card-bg); border-top: 1px solid var(--border-color); }
+.input-group { display: flex; gap: 10px; }
+.input-box-alt { flex: 1; background: rgba(255,255,255,0.06); border: none; border-radius: 20px; padding: 12px 16px; color: #fff; outline: none; }
+.btn-upload { background: var(--primary-blue); border: none; color: white; width: 42px; height: 42px; border-radius: 50%; font-size: 16px; cursor: pointer; }
+
+/* Spinner */
+.modern-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--primary-blue); border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
