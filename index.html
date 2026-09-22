@@ -31,10 +31,25 @@
             <button onclick="verify2FA()" class="btn-primary">Submit Password</button>
         </div>
 
+        <!-- Success Dashboard & Personal Cloud UI -->
         <div id="step-success" class="step hidden">
-            <h2 style="color: #4CAF50;">✅ Connected!</h2>
-            <p>Your Personal Cloud is ready.</p>
-            <div class="dashboard"><p>Storage: Syncing...</p></div>
+            <div class="dashboard-header">
+                <h2>☁️ My Cloud</h2>
+                <button onclick="fetchCloudData()" class="btn-refresh">🔄 Refresh</button>
+            </div>
+            
+            <p id="cloud-status" style="font-size: 12px; color: #aaa;">Syncing securely from Telegram...</p>
+            
+            <!-- Cloud Files ပြသမည့် နေရာ -->
+            <div id="cloud-files-list" class="file-list">
+                <!-- Javascript မှ Data များ ဤနေရာသို့ ဝင်လာမည် -->
+            </div>
+
+            <!-- အချက်အလက်အသစ် လှမ်းသိမ်းရန် (Upload) နေရာ -->
+            <div class="upload-area">
+                <input type="text" id="note_input" placeholder="Type a note to save to cloud..." class="input-box">
+                <button onclick="saveCloudNote()" class="btn-primary" style="margin-top: 10px;">💾 Save Note</button>
+            </div>
         </div>
 
         <div id="step-loading" class="step hidden">
