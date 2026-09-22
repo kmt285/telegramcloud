@@ -199,29 +199,45 @@ async function saveCloudNote() {
     btn.innerHTML = "<i class='fa-solid fa-paper-plane'></i>"; btn.disabled = false;
 }
 
-// 🚀 --- TELEGRAM NATIVE VIEWER သို့ တိုက်ရိုက်ပို့ဆောင်ခြင်း (UX Magic) --- 🚀
+// 💡 တင့်တယ်လှပသော Toast မက်ဆေ့ချ် ပြသမည့် Function
+function showToast(message, type = "normal") {
+    let existing = document.querySelector(".toast");
+    if(existing) existing.remove(); // အဟောင်းရှိရင်ဖျက်မည်
+
+    let toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+    toast.innerHTML = message;
+    document.body.appendChild(toast);
+    
+    // ၃ စက္ကန့်အကြာတွင် အလိုအလျောက် ပျောက်သွားမည်
+    setTimeout(() => {
+        toast.style.animation = "fadeOut 0.3s forwards";
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// 🚀 --- ဖိုင်နှိပ်လျှင် App မပိတ်ဘဲ Chat ထဲသို့ တိုက်ရိုက်ပို့မည့် UX --- 🚀
 async function openFile(msgId) {
-    // ဖုန်းကို တုန်ခိုင်းမည်
     tg.HapticFeedback.impactOccurred("medium");
     
-    // 💡 UX ပိုကောင်းစေရန် User အား Loading ပြပေးမည်
-    let statusText = document.getElementById("cloud-status");
-    if(statusText) {
-        statusText.innerText = "Opening file in chat...";
-        statusText.style.color = "var(--primary-blue)";
-    }
+    // ပို့နေကြောင်း User အား အသိပေးမည်
+    showToast("<i class='fa-solid fa-spinner fa-spin mr-2'></i> Sending to chat...", "normal");
     
     try {
-        // 💡 ဤနေရာတွင် await ထည့်ရန် အလွန်အရေးကြီးပါသည်။ 
-        // Backend သို့ Data အပြည့်အဝ ရောက်ရှိသွားသည်အထိ စောင့်ပေးပါမည်။
-        await fetch(`${BACKEND_URL}/api/view_file`, {
+        let res = await fetch(`${BACKEND_URL}/api/view_file`, {
             method: "POST", headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ name: userName, msg_id: msgId })
         });
+        let result = await res.json();
+        
+        if(result.success) {
+            tg.HapticFeedback.notificationOccurred("success");
+            // အောင်မြင်ပါက Swipe Down လုပ်ရန် အသိပေးမည် (App မပိတ်ပါ)
+            showToast("<i class='fa-solid fa-check mr-2'></i> Ready! Swipe down app to view.", "success");
+        } else {
+            showToast("<i class='fa-solid fa-xmark mr-2'></i> Failed to send.", "error");
+        }
     } catch(e) {
-        console.log("View Error:", e);
+        showToast("Connection error.", "error");
     }
-    
-    // Backend သို့ လှမ်းပို့ပြီးမှသာ Mini App ကို အသေအချာ ပိတ်ချမည်
-    tg.close(); 
 }
