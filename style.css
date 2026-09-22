@@ -30,3 +30,15 @@ body {
     width: 90%; padding: 12px; margin-top: 10px; border-radius: 8px;
     border: none; text-align: center; font-size: 18px;
 }
+
+/* CSS အဟောင်းများအောက်တွင် ထပ်ထည့်ရန် */
+.spinner {
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border-left-color: #0088cc;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px auto;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
