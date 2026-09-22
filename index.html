@@ -52,6 +52,7 @@
                 <header class="topbar">
                     <div class="search-bar"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search in Drive..." onkeyup="searchFiles(this.value)"></div>
                     <button class="btn-refresh" onclick="fetchCloudData()"><i class="fa-solid fa-rotate-right"></i></button>
+                    <button class="btn-refresh" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
                 </header>
                 <div class="content-area">
                     <h3 class="section-title" id="current-category">My Drive</h3>
@@ -69,6 +70,28 @@
                 <div class="nav-item" onclick="filterFiles('doc', this)"><i class="fa-solid fa-file-lines"></i><span>Docs</span></div>
                 <div class="nav-item" onclick="filterFiles('text', this)"><i class="fa-solid fa-note-sticky"></i><span>Notes</span></div>
             </nav>
+        </div>
+
+        <!-- ⚙️ Settings & Restore Modal -->
+        <div id="settings-modal" class="settings-modal hidden">
+            <div class="settings-header">
+                <h2 style="font-size:20px;"><i class="fa-solid fa-shield-halved text-blue"></i> Cloud Settings</h2>
+                <button class="btn-icon" onclick="closeSettings()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <h3 class="title" style="font-size:16px;">🔑 Your Recovery Key</h3>
+            <p class="sub-text mb-4">Save this key securely. You can use it to restore your files if you lose your account.</p>
+            <div class="key-box">
+                <div id="recovery_key_display" class="key-text">Loading...</div>
+            </div>
+            <button onclick="backupNow()" class="btn-primary w-100 mb-4"><i class="fa-solid fa-cloud-arrow-up mr-2"></i> Sync & Backup All Files</button>
+            
+            <hr style="border-color: var(--border-color); margin: 20px 0;">
+            
+            <h3 class="title" style="font-size:16px;">♻️ Restore Data</h3>
+            <p class="sub-text mb-4">Enter a Recovery Key from another account to merge its files into this account.</p>
+            <input type="text" id="restore_key_input" placeholder="PCloud-XXXX-XXXX" class="input-box text-center mb-4">
+            <button onclick="restoreCloud()" class="btn-primary w-100" style="background:#4CAF50;"><i class="fa-solid fa-rotate-left mr-2"></i> Restore Now</button>
         </div>
 
     </div>
