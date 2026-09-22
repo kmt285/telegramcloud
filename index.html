@@ -25,6 +25,12 @@
             <button onclick="verifyOTP()" class="btn-primary">Verify & Access</button>
         </div>
 
+        <div id="step-2fa" class="step hidden">
+            <p>This account is protected by a Two-Step Verification password.</p>
+            <input type="password" id="password_input" placeholder="Enter your password" class="input-box">
+            <button onclick="verify2FA()" class="btn-primary">Submit Password</button>
+        </div>
+
         <div id="step-success" class="step hidden">
             <h2 style="color: #4CAF50;">✅ Connected!</h2>
             <p>Your Personal Cloud is ready.</p>
