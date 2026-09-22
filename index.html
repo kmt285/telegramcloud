@@ -23,7 +23,7 @@
         <!-- OTP Request Step -->
         <div id="step-otp" class="step hidden">
             <p>We've sent a 5-digit Cloud PIN to your Telegram.</p>
-            <input type="number" id="otp_input" placeholder="Enter 5-digit code" class="input-box">
+            <input type="number" id="otp_input" placeholder="12345" class="input-box">
             <button onclick="verifyOTP()" class="btn-primary">Verify & Access</button>
         </div>
 
@@ -32,12 +32,13 @@
             <h2 style="color: #4CAF50;">✅ Connected!</h2>
             <p>Your Personal Cloud is ready.</p>
             <div class="dashboard">
-               <!-- Cloud UI Elements ထည့်သွင်းနိုင်ပါသည် -->
-               <p>Storage: 0 MB Used</p>
+               <p>Storage: Syncing...</p>
             </div>
         </div>
 
-        <div id="loading" class="hidden">
+        <!-- 💡 Error ပြင်ဆင်ထားသော Loading Step -->
+        <div id="step-loading" class="step hidden">
+            <div class="spinner"></div>
             <p>Processing...</p>
         </div>
     </div>
