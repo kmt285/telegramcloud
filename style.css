@@ -1,0 +1,32 @@
+body {
+    background-color: #0e1621;
+    color: white;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+.cloud-container {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    width: 90%;
+    max-width: 350px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+.glow { color: #0088cc; text-shadow: 0 0 10px #0088cc; }
+.step { transition: opacity 0.3s; }
+.hidden { display: none; }
+.btn-primary {
+    background: #0088cc; color: white; border: none; padding: 12px 20px;
+    border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%;
+    margin-top: 15px; font-weight: bold;
+}
+.input-box {
+    width: 90%; padding: 12px; margin-top: 10px; border-radius: 8px;
+    border: none; text-align: center; font-size: 18px;
+}
