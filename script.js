@@ -241,3 +241,56 @@ async function openFile(msgId) {
         showToast("Connection error.", "error");
     }
 }
+
+// ⚙️ --- SETTINGS & DISASTER RECOVERY --- ⚙️
+async function openSettings() {
+    tg.HapticFeedback.impactOccurred("light");
+    document.getElementById("settings-modal").classList.remove("hidden");
+    
+    // Recovery Key လှမ်းယူမည်
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/get_recovery_key`, {
+            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName })
+        });
+        let result = await res.json();
+        if(result.success) document.getElementById("recovery_key_display").innerText = result.key;
+    } catch(e) { document.getElementById("recovery_key_display").innerText = "Error loading key"; }
+}
+
+function closeSettings() { document.getElementById("settings-modal").classList.add("hidden"); }
+
+async function backupNow() {
+    let btn = event.target.closest('button');
+    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> Backing up..."; btn.disabled = true;
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/backup_all`, {
+            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName })
+        });
+        let result = await res.json();
+        if(result.success) showToast(`<i class='fa-solid fa-check mr-2'></i> ${result.count} files securely backed up!`, "success");
+        else showToast("Backup failed.", "error");
+    } catch(e) { showToast("Connection error.", "error"); }
+    btn.innerHTML = "<i class='fa-solid fa-cloud-arrow-up mr-2'></i> Sync & Backup All Files"; btn.disabled = false;
+}
+
+async function restoreCloud() {
+    let keyInput = document.getElementById("restore_key_input").value.trim();
+    if(!keyInput) return alert("Please enter a Recovery Key.");
+    
+    let btn = event.target.closest('button');
+    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> Restoring Data..."; btn.disabled = true;
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/restore_cloud`, {
+            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName, key: keyInput })
+        });
+        let result = await res.json();
+        if(result.success) {
+            closeSettings();
+            showToast(`<i class='fa-solid fa-check mr-2'></i> Successfully restored ${result.count} files!`, "success");
+            fetchCloudData(); // Data အသစ်များကို ချက်ချင်း ပြန်ဆွဲပြမည်
+        } else {
+            alert("Error: " + (result.message || "Invalid Key."));
+        }
+    } catch(e) { alert("Restore Failed."); }
+    btn.innerHTML = "<i class='fa-solid fa-rotate-left mr-2'></i> Restore Now"; btn.disabled = false;
+}
