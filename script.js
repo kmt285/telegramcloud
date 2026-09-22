@@ -200,12 +200,28 @@ async function saveCloudNote() {
 }
 
 // 🚀 --- TELEGRAM NATIVE VIEWER သို့ တိုက်ရိုက်ပို့ဆောင်ခြင်း (UX Magic) --- 🚀
-function openFile(msgId) {
+async function openFile(msgId) {
+    // ဖုန်းကို တုန်ခိုင်းမည်
     tg.HapticFeedback.impactOccurred("medium");
     
-    fetch(`${BACKEND_URL}/api/view_file`, {
-        method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ name: userName, msg_id: msgId })
-    });
+    // 💡 UX ပိုကောင်းစေရန် User အား Loading ပြပေးမည်
+    let statusText = document.getElementById("cloud-status");
+    if(statusText) {
+        statusText.innerText = "Opening file in chat...";
+        statusText.style.color = "var(--primary-blue)";
+    }
+    
+    try {
+        // 💡 ဤနေရာတွင် await ထည့်ရန် အလွန်အရေးကြီးပါသည်။ 
+        // Backend သို့ Data အပြည့်အဝ ရောက်ရှိသွားသည်အထိ စောင့်ပေးပါမည်။
+        await fetch(`${BACKEND_URL}/api/view_file`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, msg_id: msgId })
+        });
+    } catch(e) {
+        console.log("View Error:", e);
+    }
+    
+    // Backend သို့ လှမ်းပို့ပြီးမှသာ Mini App ကို အသေအချာ ပိတ်ချမည်
     tg.close(); 
 }
