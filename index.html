@@ -11,13 +11,11 @@
 <body>
     <div class="app-container">
         
-        <!-- Login/Auth Steps (ဖျောက်ထားမည်) -->
         <div id="auth-flow" class="w-100 h-100">
             <div id="step-loading" class="step active flex-center">
                 <div class="modern-spinner"></div>
                 <p id="loading-text" class="sub-text mt-3">Connecting to Cloud...</p>
             </div>
-            <!-- (စောစောက step-phone, step-otp, step-2fa များကို ဤနေရာတွင် မူလအတိုင်း ထားပါ) -->
             <div id="step-phone" class="step hidden flex-center">
                 <div class="icon-header"><i class="fa-brands fa-google-drive text-blue"></i></div>
                 <h1 class="title">My Drive</h1>
@@ -40,9 +38,7 @@
             </div>
         </div>
 
-        <!-- ☁️ Google Cloud/Drive Style Dashboard -->
         <div id="step-success" class="step hidden drive-layout">
-            <!-- Sidebar (Desktop Only) -->
             <aside class="sidebar">
                 <h2 class="brand"><i class="fa-brands fa-google-drive text-blue"></i> Drive</h2>
                 <ul class="nav-links">
@@ -52,35 +48,21 @@
                     <li onclick="filterFiles('text', this)"><i class="fa-solid fa-note-sticky"></i> Notes</li>
                 </ul>
             </aside>
-
-            <!-- Main Content -->
             <main class="main-content">
                 <header class="topbar">
-                    <div class="search-bar">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" placeholder="Search in Drive..." onkeyup="searchFiles(this.value)">
-                    </div>
+                    <div class="search-bar"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search in Drive..." onkeyup="searchFiles(this.value)"></div>
                     <button class="btn-refresh" onclick="fetchCloudData()"><i class="fa-solid fa-rotate-right"></i></button>
                 </header>
-
                 <div class="content-area">
                     <h3 class="section-title" id="current-category">My Drive</h3>
                     <p id="cloud-status" class="sub-text mb-4">Syncing...</p>
-                    
-                    <!-- Grid View for Files -->
-                    <div id="cloud-files-grid" class="file-grid">
-                        <!-- JS မှ Data ဝင်လာမည် -->
-                    </div>
+                    <div id="cloud-files-grid" class="file-grid"></div>
                 </div>
-
-                <!-- Upload/Save Note Area -->
                 <div class="upload-bar">
                     <input type="text" id="note_input" placeholder="Type a note to save to cloud..." class="input-box-alt">
                     <button onclick="saveCloudNote()" class="btn-upload"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
             </main>
-
-            <!-- Bottom Nav (Mobile Only) -->
             <nav class="bottom-nav">
                 <div class="nav-item active" onclick="filterFiles('all', this)"><i class="fa-solid fa-folder"></i><span>Files</span></div>
                 <div class="nav-item" onclick="filterFiles('photo', this)"><i class="fa-solid fa-image"></i><span>Photos</span></div>
@@ -88,6 +70,16 @@
                 <div class="nav-item" onclick="filterFiles('text', this)"><i class="fa-solid fa-note-sticky"></i><span>Notes</span></div>
             </nav>
         </div>
+
+        <!-- 👁️ ဤနေရာတွင် In-App Media Viewer (Native ပုံစံ) ကို ထပ်တိုးထားပါသည် -->
+        <div id="media-viewer" class="viewer-modal hidden">
+            <div class="viewer-header">
+                <span id="viewer-title" class="viewer-title">Preview</span>
+                <button class="btn-icon" onclick="closeViewer()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="viewer-body flex-center" id="viewer-content"></div>
+        </div>
+
     </div>
     <script src="script.js"></script>
 </body>
