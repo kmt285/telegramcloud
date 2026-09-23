@@ -136,44 +136,93 @@ async function verify2FA() {
     } catch(e) { alert("Verification Failed."); switchStep("step-2fa"); }
 }
 
-// --- ☁️ CLOUD DASHBOARD FUNCTIONS (Auto Logout ဖြင့်) ---
-async function fetchCloudData() {
+let currentOffset = 0; // 💡 နောက်ဆုံးရောက်နေတဲ့ နေရာကို မှတ်ထားမည့် Global Variable
+
+async function fetchCloudData(isLoadMore = false) {
     let statusText = document.getElementById("cloud-status");
     let grid = document.getElementById("cloud-files-grid");
+    let loadMoreBtn = document.getElementById("btn-load-more");
+    let loadMoreContainer = document.getElementById("load-more-container");
     
-    statusText.innerText = "Syncing with Telegram Cloud...";
-    grid.innerHTML = "<div class='flex-center' style='grid-column: 1 / -1;'><div class='modern-spinner'></div></div>";
+    if (!isLoadMore) {
+        currentOffset = 0; // အစက ပြန်ဆွဲရင် 0 ကနေ ပြန်စမည်
+        statusText.innerText = "Syncing with Telegram Cloud...";
+        grid.innerHTML = "<div class='flex-center' style='grid-column: 1 / -1;'><div class='modern-spinner'></div></div>";
+        loadMoreContainer.classList.add("hidden");
+    } else {
+        // Load More နှိပ်လိုက်ရင် Loading လည်နေစေရန်
+        loadMoreBtn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> Loading...";
+        loadMoreBtn.disabled = true;
+    }
     
     try {
         let res = await fetch(`${BACKEND_URL}/api/get_cloud_data`, {
-            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName })
+            method: "POST", headers: {"Content-Type": "application/json"}, 
+            // 💡 offset_id ကိုပါ Backend သို့ တွဲပို့မည်
+            body: JSON.stringify({ name: userName, offset_id: currentOffset })
         });
         let result = await res.json();
         
         if(result.success) {
+            if (isLoadMore) {
+                // အဟောင်းထဲကို အသစ်ရလာတဲ့ data တွေ ဆက်ပေါင်းထည့်မည် (Concat)
+                allFilesData = allFilesData.concat(result.files);
+            } else {
+                allFilesData = result.files;
+            }
 
-// ပြင်ဆင်ရန် (thumb_data ကို ဖယ်ပြီးမှ သိမ်းမည်)
-allFilesData = result.files;
-let cacheData = allFilesData.map(f => {
-    let { thumb_data, ...rest } = f; // thumb_data ကို ခွဲထုတ်လိုက်သည်
-    return rest;
-});
-localStorage.setItem(`cloudData_${userName}`, JSON.stringify(cacheData));
+            // 💡 ပြီးပြည့်စုံသော Data Cache စနစ် (Base64 ဖယ်ထုတ်ပြီး သိမ်းမည်)
+            let cacheData = allFilesData.map(f => {
+                let { thumb_data, ...rest } = f; 
+                return rest;
+            });
+            localStorage.setItem(`cloudData_${userName}`, JSON.stringify(cacheData));
+            
             statusText.innerText = `${allFilesData.length} items synced.`;
-            renderFilesGrid(allFilesData);
+            
+            // UI တွင် ပြန်လည်ရေးဆွဲမည်
+            let activeCategory = document.querySelector('.nav-links li.active, .bottom-nav .nav-item.active')?.innerText.toLowerCase() || 'my drive';
+            let type = activeCategory.includes('photo') ? 'photo' : (activeCategory.includes('doc') ? 'doc' : (activeCategory.includes('note') ? 'text' : 'all'));
+            renderFilesGrid(type === 'all' ? allFilesData : allFilesData.filter(f => f.type === type));
+
+            // 💡 နောက်တစ်ခါ Load More နှိပ်ရန် offset ကို မှတ်ထားမည်
+            if (result.files.length > 0 && result.next_offset) {
+                currentOffset = result.next_offset;
+                // ဖိုင် ၅၀ အပြည့်ပါလာရင် နောက်ထပ်ကျန်နိုင်သေးလို့ Button ကို ဆက်ပြထားမည်
+                if (result.files.length === 50) {
+                    loadMoreContainer.classList.remove("hidden");
+                } else {
+                    loadMoreContainer.classList.add("hidden");
+                }
+            } else {
+                loadMoreContainer.classList.add("hidden");
+            }
+
         } else {
-            // 💡 Session Expired ဖြစ်သွားလျှင် User အား အသိပေးပြီး Login Page သို့ ပြန်ပို့မည်
             if (result.session_expired) {
                 tg.HapticFeedback.notificationOccurred("error");
                 alert("Session Expired: သင်၏ အကောင့် Terminate လုပ်ခံရသဖြင့် ပြန်လည် ချိတ်ဆက်ပေးပါ။");
-                window.location.reload(); // App ကို အစမှ ပြန်ဖွင့်ခိုင်းမည်
+                window.location.reload(); 
             } else {
-                statusText.innerText = "Sync failed.";
+                if (!isLoadMore) statusText.innerText = "Sync failed.";
+                else showToast("Failed to load more files.", "error");
             }
         }
     } catch(e) { 
-        statusText.innerText = "Connection error."; 
+        if (!isLoadMore) statusText.innerText = "Connection error."; 
+        else showToast("Connection error.", "error");
     }
+
+    // Button ကို မူလအခြေအနေသို့ ပြန်ထားမည်
+    if (isLoadMore) {
+        loadMoreBtn.innerHTML = "<i class='fa-solid fa-cloud-arrow-down mr-2'></i> Load More"; 
+        loadMoreBtn.disabled = false;
+    }
+}
+
+// 💡 Load More Button နှိပ်လျှင် ခေါ်မည့် Function အသစ်
+function loadMoreFiles() {
+    fetchCloudData(true);
 }
 
 function renderFilesGrid(files) {
