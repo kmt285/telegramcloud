@@ -67,7 +67,7 @@ function handleMobileContact() {
     tg.requestContact(function(shared) {
         if (shared) {
             let userId = tg.initDataUnsafe?.user?.id;
-            if (!userId) return alert("Error: User ID ဖတ်မရပါ။");
+            if (!userId) return showAlert("User ID ဖတ်မရပါ။", "Error");
             
             setLoadingText("Requesting OTP...");
             switchStep("step-loading");
@@ -76,7 +76,7 @@ function handleMobileContact() {
             setTimeout(() => {
                 if(pollingInterval) {
                     clearInterval(pollingInterval);
-                    alert("Timeout: ချိတ်ဆက်မှု ကြန့်ကြာနေပါသည်။");
+                    showAlert("ချိတ်ဆက်မှု ကြန့်ကြာနေပါသည်။", "Timeout");
                     switchStep("step-phone");
                 }
             }, 30000);
@@ -86,7 +86,7 @@ function handleMobileContact() {
 
 async function handleDesktopContact() {
     let phone = document.getElementById("manual_phone").value.trim();
-    if (!phone) return alert("ဖုန်းနံပါတ် ရိုက်ထည့်ပါ။");
+    if (!phone) return showAlert("ဖုန်းနံပါတ် ရိုက်ထည့်ပါ။", "Notice");
     if (!phone.startsWith("+")) phone = "+" + phone;
     userPhone = phone;
     setLoadingText("Sending code...");
@@ -95,8 +95,8 @@ async function handleDesktopContact() {
         let res = await fetch(`${BACKEND_URL}/api/send_code`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ phone: userPhone }) });
         let result = await res.json();
         if (result.success) { phoneHash = result.hash; switchStep("step-otp"); } 
-        else { alert("Error: " + result.message); switchStep("step-phone"); }
-    } catch (e) { alert("Connection Failed."); switchStep("step-phone"); }
+        else { showAlert(result.message, "Error"); switchStep("step-phone"); }
+    } catch (e) { showAlert("Connection Failed.", "Error"); switchStep("step-phone"); }
 }
 
 async function checkContactReceived(userId) {
@@ -109,7 +109,7 @@ async function checkContactReceived(userId) {
             switchStep("step-otp"); tg.HapticFeedback.impactOccurred("medium");
         } else if (result.message) { 
             clearInterval(pollingInterval); pollingInterval = null;
-            alert("Error: " + result.message); switchStep("step-phone");
+            showAlert(result.message, "Error"); switchStep("step-phone");
         }
     } catch(e) {
         clearInterval(pollingInterval);
@@ -121,7 +121,7 @@ async function checkContactReceived(userId) {
 
 async function verifyOTP() {
     let code = document.getElementById("otp_input").value;
-    if(code.length !== 5) return alert("OTP ၅ လုံး ပြည့်အောင် ရိုက်ပါ။");
+    if(code.length !== 5) return showAlert("OTP ၅ လုံး ပြည့်အောင် ရိုက်ပါ။", "Notice");
     setLoadingText("Verifying...");
     switchStep("step-loading");
     try {
@@ -130,13 +130,13 @@ async function verifyOTP() {
         if(result.success) {
             switchStep("step-success"); tg.HapticFeedback.notificationOccurred("success"); fetchCloudData(); 
         } else if (result.message === "2FA_REQUIRED") { switchStep("step-2fa"); } 
-        else { alert("Error: " + result.message); switchStep("step-otp"); }
-    } catch(e) { alert("Verification Failed."); switchStep("step-otp"); }
+        else { showAlert(result.message, "Error"); switchStep("step-otp"); }
+    } catch(e) { showAlert("Verification Failed.", "Error"); switchStep("step-otp"); }
 }
 
 async function verify2FA() {
     let password = document.getElementById("password_input").value;
-    if(!password) return alert("Password ရိုက်ထည့်ပါ။");
+    if(!password) return showAlert("Password ရိုက်ထည့်ပါ။", "Notice");
     setLoadingText("Unlocking...");
     switchStep("step-loading");
     try {
@@ -144,8 +144,8 @@ async function verify2FA() {
         let result = await res.json();
         if(result.success) {
             switchStep("step-success"); tg.HapticFeedback.notificationOccurred("success"); fetchCloudData();
-        } else { alert("Error: Password မှားယွင်းနေပါသည်။"); switchStep("step-2fa"); }
-    } catch(e) { alert("Verification Failed."); switchStep("step-2fa"); }
+        } else { showAlert("Password မှားယွင်းနေပါသည်။", "Error"); switchStep("step-2fa"); }
+    } catch(e) { showAlert("Verification Failed.", "Error"); switchStep("step-2fa"); }
 }
 
 let currentOffset = 0; // 💡 နောက်ဆုံးရောက်နေတဲ့ နေရာကို မှတ်ထားမည့် Global Variable
@@ -221,8 +221,7 @@ async function fetchCloudData(isLoadMore = false) {
             // 💡 Session ပျက်သွားပါက User ကို အသိပေးပြီး အစကနေ ပြန်ဝင်ခိုင်းမည်
             if (result.session_expired) {
                 tg.HapticFeedback.notificationOccurred("error");
-                alert("Session Expired: သင်၏ အကောင့် Terminate လုပ်ခံရသဖြင့် ပြန်လည် ချိတ်ဆက်ပေးပါ။");
-                window.location.reload(); 
+                showAlert("Your account sessoin Terminated! Please, reconnect.", "Session Expired", () => window.location.reload()); 
             } else {
                 if (!isLoadMore) statusText.innerText = "Sync failed.";
                 else showToast("Failed to load more files.", "error");
@@ -407,7 +406,7 @@ async function backupNow() {
 
 async function restoreCloud() {
     let keyInput = document.getElementById("restore_key_input").value.trim();
-    if(!keyInput) return alert("Please enter a Recovery Key.");
+    if(!keyInput) return showAlert("Please enter a Recovery Key.", "Notice");
     
     let btn = event.target.closest('button');
     btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> Restoring Data..."; btn.disabled = true;
@@ -421,8 +420,42 @@ async function restoreCloud() {
             showToast(`<i class='fa-solid fa-check mr-2'></i> Successfully restored ${result.count} files!`, "success");
             fetchCloudData(); // Data အသစ်များကို ချက်ချင်း ပြန်ဆွဲပြမည်
         } else {
-            alert("Error: " + (result.message || "Invalid Key."));
+            showAlert(result.message || "Invalid Key.", "Error");
         }
-    } catch(e) { alert("Restore Failed."); }
+    } catch(e) { showAlert("Restore Failed.", "Error"); }
     btn.innerHTML = "<i class='fa-solid fa-rotate-left mr-2'></i> Restore Now"; btn.disabled = false;
+}
+
+// 💡 Custom Alert Logic
+let alertCloseCallback = null;
+
+function showAlert(message, title = "Notice", callback = null) {
+    alertCloseCallback = callback;
+    document.getElementById("custom-alert-title").innerText = title;
+    document.getElementById("custom-alert-message").innerText = message;
+    
+    let overlay = document.getElementById("custom-alert-overlay");
+    overlay.classList.remove("hidden");
+    
+    // Animation အလုပ်လုပ်ရန် အချိန်အနည်းငယ် ခြားပေးခြင်း
+    setTimeout(() => {
+        overlay.classList.add("show");
+    }, 10);
+    
+    if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("warning");
+}
+
+function closeCustomAlert() {
+    let overlay = document.getElementById("custom-alert-overlay");
+    overlay.classList.remove("show");
+    
+    setTimeout(() => {
+        overlay.classList.add("hidden");
+        // OK နှိပ်ပြီးမှ ဆက်လုပ်မည့် အလုပ်ရှိပါက (ဥပမာ - Reload) ဆက်လုပ်ရန်
+        if (alertCloseCallback) {
+            let cb = alertCloseCallback;
+            alertCloseCallback = null;
+            cb();
+        }
+    }, 300);
 }
