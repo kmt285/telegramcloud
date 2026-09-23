@@ -459,3 +459,44 @@ function closeCustomAlert() {
         }
     }, 300);
 }
+
+// 💡 အသစ် - Access Key ဖြင့် Web မှ တိုက်ရိုက် Login ဝင်မည့် Function
+async function loginWithKey() {
+    let keyInput = document.getElementById("access_key_input").value.trim();
+    if(!keyInput) return showAlert("Please enter your Access Key.", "Notice");
+    
+    setLoadingText("Verifying Key...");
+    switchStep("step-loading");
+    
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/login_with_key`, {
+            method: "POST", 
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ key: keyInput })
+        });
+        
+        let result = await res.json();
+        
+        if(result.success) {
+            // 💡 အရေးကြီးဆုံးအဆင့် - Backend မှပေးသော မူလ Account Name ကို LocalStorage တွင် ပြန်လည်အစားထိုးခြင်း
+            userName = result.name;
+            
+            // အကယ်၍ Web Browser မှ ဝင်ခြင်းဖြစ်ပါက temp_uid ကိုပါ ညှိပေးမည်
+            if (userName.includes("Web_Cloud_User_")) {
+                localStorage.setItem("temp_uid", userName.replace("Web_Cloud_User_", ""));
+            }
+            
+            switchStep("step-success");
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+            
+            // ဒေတာများ ပြန်လည်ခေါ်ယူခြင်း
+            fetchCloudData(); 
+        } else {
+            showAlert(result.message, "Login Failed");
+            switchStep("step-key-login");
+        }
+    } catch(e) {
+        showAlert("Connection Failed. Please check your internet.", "Error");
+        switchStep("step-key-login");
+    }
+}
