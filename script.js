@@ -19,6 +19,15 @@ function setLoadingText(text) { document.getElementById("loading-text").innerTex
 // --- 💡 Auto Login Check ---
 window.onload = async () => {
     switchStep("step-loading");
+
+    let cached = localStorage.getItem(`cloudData_${userName}`);
+    if (cached) {
+        try {
+            allFilesData = JSON.parse(cached);
+            renderFilesGrid(allFilesData);
+        } catch(e) {}
+    }
+    
     try {
         let res = await fetch(`${BACKEND_URL}/api/check_session`, {
             method: "POST", headers: {"Content-Type": "application/json"},
@@ -138,6 +147,7 @@ async function fetchCloudData() {
         
         if(result.success) {
             allFilesData = result.files;
+            localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
             statusText.innerText = `${allFilesData.length} items synced.`;
             renderFilesGrid(allFilesData);
         } else {
