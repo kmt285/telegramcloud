@@ -2,6 +2,9 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
 
+let currentCategory = 'all'; 
+let cloudTotalCounts = {};
+
 // 🔴 သင့် Render URL အမှန်ဖြင့် အစားထိုးပါ (အဆုံးတွင် / မပါရ)
 const BACKEND_URL = "https://telegramcloudbackend.onrender.com";
 
@@ -19,11 +22,14 @@ function setLoadingText(text) { document.getElementById("loading-text").innerTex
 // --- 💡 Auto Login Check ---
 window.onload = async () => {
     switchStep("step-loading");
-
     let cached = localStorage.getItem(`cloudData_${userName}`);
+    let cachedCounts = localStorage.getItem(`cloudCounts_${userName}`);
+    if (cachedCounts) { try { cloudTotalCounts = JSON.parse(cachedCounts); } catch(e) {} }
+    
     if (cached) {
         try {
             allFilesData = JSON.parse(cached);
+            updateCategoryStatus();
             renderFilesGrid(allFilesData);
         } catch(e) {}
     }
@@ -144,61 +150,69 @@ async function fetchCloudData(isLoadMore = false) {
     let loadMoreBtn = document.getElementById("btn-load-more");
     let loadMoreContainer = document.getElementById("load-more-container");
     
+    // 💡 အသစ်ပြန်ခေါ်ခြင်းလား၊ Load More နှိပ်ခြင်းလား စစ်ဆေးခြင်း
     if (!isLoadMore) {
         currentOffset = 0; // အစက ပြန်ဆွဲရင် 0 ကနေ ပြန်စမည်
         statusText.innerText = "Syncing with Telegram Cloud...";
         grid.innerHTML = "<div class='flex-center' style='grid-column: 1 / -1;'><div class='modern-spinner'></div></div>";
-        loadMoreContainer.classList.add("hidden");
+        if (loadMoreContainer) loadMoreContainer.classList.add("hidden");
     } else {
         // Load More နှိပ်လိုက်ရင် Loading လည်နေစေရန်
-        loadMoreBtn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> Loading...";
-        loadMoreBtn.disabled = true;
+        if (loadMoreBtn) {
+            loadMoreBtn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> Loading...";
+            loadMoreBtn.disabled = true;
+        }
     }
     
     try {
         let res = await fetch(`${BACKEND_URL}/api/get_cloud_data`, {
-            method: "POST", headers: {"Content-Type": "application/json"}, 
+            method: "POST", 
+            headers: {"Content-Type": "application/json"}, 
             // 💡 offset_id ကိုပါ Backend သို့ တွဲပို့မည်
             body: JSON.stringify({ name: userName, offset_id: currentOffset })
         });
         let result = await res.json();
         
         if(result.success) {
+            // 💡 Load More ဆိုလျှင် အဟောင်းထဲကို အသစ်ရလာတဲ့ data တွေ ဆက်ပေါင်းထည့်မည် (Concat)
             if (isLoadMore) {
-                // အဟောင်းထဲကို အသစ်ရလာတဲ့ data တွေ ဆက်ပေါင်းထည့်မည် (Concat)
                 allFilesData = allFilesData.concat(result.files);
             } else {
                 allFilesData = result.files;
             }
 
-            // 💡 ပြီးပြည့်စုံသော Data Cache စနစ် (Base64 ဖယ်ထုတ်ပြီး သိမ်းမည်)
+            // 💡 Counts အသစ်ရလာပါက Update လုပ်မည်
+            if (result.total_counts) {
+                cloudTotalCounts = result.total_counts;
+                localStorage.setItem(`cloudCounts_${userName}`, JSON.stringify(cloudTotalCounts));
+            }
+
+            // 💡 Base64 ပုံများကို ဖယ်ထုတ်ပြီးမှ LocalStorage တွင် သိမ်းမည် (Browser Quota Limit မဖြစ်စေရန်)
             let cacheData = allFilesData.map(f => {
                 let { thumb_data, ...rest } = f; 
                 return rest;
             });
             localStorage.setItem(`cloudData_${userName}`, JSON.stringify(cacheData));
             
-            statusText.innerText = `${allFilesData.length} items synced.`;
-            
-            // UI တွင် ပြန်လည်ရေးဆွဲမည်
-            let activeCategory = document.querySelector('.nav-links li.active, .bottom-nav .nav-item.active')?.innerText.toLowerCase() || 'my drive';
-            let type = activeCategory.includes('photo') ? 'photo' : (activeCategory.includes('doc') ? 'doc' : (activeCategory.includes('note') ? 'text' : 'all'));
-            renderFilesGrid(type === 'all' ? allFilesData : allFilesData.filter(f => f.type === type));
+            // 💡 UI သို့ Data များ ပြန်လည်ရေးဆွဲမည်
+            updateCategoryStatus();
+            renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 
             // 💡 နောက်တစ်ခါ Load More နှိပ်ရန် offset ကို မှတ်ထားမည်
             if (result.files.length > 0 && result.next_offset) {
                 currentOffset = result.next_offset;
                 // ဖိုင် ၅၀ အပြည့်ပါလာရင် နောက်ထပ်ကျန်နိုင်သေးလို့ Button ကို ဆက်ပြထားမည်
                 if (result.files.length === 50) {
-                    loadMoreContainer.classList.remove("hidden");
+                    if (loadMoreContainer) loadMoreContainer.classList.remove("hidden");
                 } else {
-                    loadMoreContainer.classList.add("hidden");
+                    if (loadMoreContainer) loadMoreContainer.classList.add("hidden");
                 }
             } else {
-                loadMoreContainer.classList.add("hidden");
+                if (loadMoreContainer) loadMoreContainer.classList.add("hidden");
             }
 
         } else {
+            // 💡 Session ပျက်သွားပါက User ကို အသိပေးပြီး အစကနေ ပြန်ဝင်ခိုင်းမည်
             if (result.session_expired) {
                 tg.HapticFeedback.notificationOccurred("error");
                 alert("Session Expired: သင်၏ အကောင့် Terminate လုပ်ခံရသဖြင့် ပြန်လည် ချိတ်ဆက်ပေးပါ။");
@@ -213,36 +227,39 @@ async function fetchCloudData(isLoadMore = false) {
         else showToast("Connection error.", "error");
     }
 
-    // Button ကို မူလအခြေအနေသို့ ပြန်ထားမည်
-    if (isLoadMore) {
+    // 💡 Button ကို မူလအခြေအနေသို့ ပြန်ထားမည်
+    if (isLoadMore && loadMoreBtn) {
         loadMoreBtn.innerHTML = "<i class='fa-solid fa-cloud-arrow-down mr-2'></i> Load More"; 
         loadMoreBtn.disabled = false;
     }
 }
-
 // 💡 Load More Button နှိပ်လျှင် ခေါ်မည့် Function အသစ်
 function loadMoreFiles() {
     fetchCloudData(true);
 }
 
+// 💡 renderFilesGrid တွင် Icons များ အသစ်ထည့်သွင်းခြင်း
 function renderFilesGrid(files) {
     let html = "";
     if(files.length === 0) {
         html = "<div class='flex-center' style='grid-column: 1 / -1; color: var(--text-muted);'><i class='fa-brands fa-google-drive mb-2' style='font-size:40px;'></i><p>Your drive is empty.</p></div>";
     } else {
         files.forEach(f => {
-            // 💡 ပြင်ဆင်ချက် - ဖိုင်တစ်ခုခု မှားယွင်းနေရင်တောင် ကျန်တဲ့ဖိုင်တွေ ဆက်ပေါ်အောင် try...catch ဖြင့် ကာကွယ်ထားပါသည်
             try {
-                let iconClass = f.type === "doc" ? "fa-file-lines doc" : (f.type === "photo" ? "fa-image photo" : "fa-note-sticky text");
-                let thumbHtml = "";
+                // Icons အသစ်များ
+                let iconClass = "fa-file-lines doc";
+                if (f.type === "photo") iconClass = "fa-image photo";
+                else if (f.type === "video") iconClass = "fa-film video";
+                else if (f.type === "link") iconClass = "fa-link link";
+                else if (f.type === "text") iconClass = "fa-note-sticky text";
                 
+                let thumbHtml = "";
                 if (f.thumb_data) {
                     thumbHtml = `<img src="${f.thumb_data}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`;
                 } else {
                     thumbHtml = `<i class="fa-solid ${iconClass} fc-icon"></i>`;
                 }
 
-                // 💡 ပြင်ဆင်ချက် - f.title သည် null ဖြစ်နေပါက 'Unknown File' ဟု အလိုအလျောက် သတ်မှတ်ပေးမည်
                 let safeTitle = f.title ? f.title.replace(/'/g, "\\'").replace(/"/g, "&quot;") : "Unknown File";
                 let displayTitle = f.title ? f.title : "Unknown File";
 
@@ -252,19 +269,38 @@ function renderFilesGrid(files) {
                     <div class="fc-title">${displayTitle}</div>
                     <div class="fc-meta">${f.size || f.date}</div>
                 </div>`;
-            } catch (err) {
-                console.error("Render error on File ID:", f.id, err);
-            }
+            } catch (err) {}
         });
     }
     document.getElementById("cloud-files-grid").innerHTML = html;
 }
 
+// 💡 Category ရွေးချယ်သည့် Function
 function filterFiles(type, element) {
+    currentCategory = type;
     document.querySelectorAll('.nav-links li, .nav-item').forEach(el => el.classList.remove('active'));
     if(element) element.classList.add('active');
-    document.getElementById('current-category').innerText = { 'all': 'My Drive', 'photo': 'Photos', 'doc': 'Documents', 'text': 'Notes' }[type];
+    
+    let titles = { 'all': 'My Drive', 'photo': 'Photos', 'video': 'Videos', 'doc': 'Documents', 'link': 'Links', 'text': 'Notes' };
+    document.getElementById('current-category').innerText = titles[type];
+    
+    updateCategoryStatus();
     renderFilesGrid(type === 'all' ? allFilesData : allFilesData.filter(f => f.type === type));
+}
+
+// 💡 စာသားကို 50 items synced | total 500 items ဟု ပြသမည့် Function အသစ်
+function updateCategoryStatus() {
+    let statusText = document.getElementById("cloud-status");
+    let filtered = currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory);
+    let currentLoaded = filtered.length;
+    
+    let total = cloudTotalCounts[currentCategory] !== undefined ? cloudTotalCounts[currentCategory] : currentLoaded;
+    
+    if (total === 0 && currentLoaded === 0) {
+        statusText.innerText = "0 items";
+    } else {
+        statusText.innerText = `${currentLoaded} items synced | total ${total} items`;
+    }
 }
 
 function searchFiles(query) {
