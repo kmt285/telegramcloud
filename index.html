@@ -58,6 +58,11 @@
                     <h3 class="section-title" id="current-category">My Drive</h3>
                     <p id="cloud-status" class="sub-text mb-4">Syncing...</p>
                     <div id="cloud-files-grid" class="file-grid"></div>
+                    <div id="load-more-container" class="w-100 flex-center mt-3 hidden">
+                    <button id="btn-load-more" onclick="loadMoreFiles()" class="btn-primary" style="padding: 10px 20px; font-size: 14px; width: auto; min-width: 150px;">
+                        <i class="fa-solid fa-cloud-arrow-down mr-2"></i> Load More
+                    </button>
+                </div>
                 </div>
                 <div class="upload-bar">
                     <input type="text" id="note_input" placeholder="Type a note to save to cloud..." class="input-box-alt">
