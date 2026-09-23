@@ -151,8 +151,14 @@ async function fetchCloudData() {
         let result = await res.json();
         
         if(result.success) {
-            allFilesData = result.files;
-            localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
+
+// ပြင်ဆင်ရန် (thumb_data ကို ဖယ်ပြီးမှ သိမ်းမည်)
+allFilesData = result.files;
+let cacheData = allFilesData.map(f => {
+    let { thumb_data, ...rest } = f; // thumb_data ကို ခွဲထုတ်လိုက်သည်
+    return rest;
+});
+localStorage.setItem(`cloudData_${userName}`, JSON.stringify(cacheData));
             statusText.innerText = `${allFilesData.length} items synced.`;
             renderFilesGrid(allFilesData);
         } else {
@@ -179,10 +185,9 @@ function renderFilesGrid(files) {
             let iconClass = f.type === "doc" ? "fa-file-lines doc" : (f.type === "photo" ? "fa-image photo" : "fa-note-sticky text");
             let thumbHtml = "";
             
-            // 💡 Thumbnails တိုက်ရိုက်ခေါ်ယူပြသမည်
-            if (f.has_thumb || f.type === 'photo') {
-                let thumbUrl = `${BACKEND_URL}/api/media?name=${encodeURIComponent(userName)}&msg_id=${f.id}&thumb=1`;
-                thumbHtml = `<img src="${thumbUrl}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`;
+            // 💡 ပြီးပြည့်စုံသော Thumbnail Logic အသစ် (Base64 ဖြင့် တိုက်ရိုက်ပြသမည် - No API Calls)
+            if (f.thumb_data) {
+                thumbHtml = `<img src="${f.thumb_data}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`;
             } else {
                 thumbHtml = `<i class="fa-solid ${iconClass} fc-icon"></i>`;
             }
