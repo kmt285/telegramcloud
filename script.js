@@ -47,15 +47,19 @@ window.onload = async () => {
             switchStep("step-success");
             fetchCloudData();
         } else {
-            let platform = tg.platform;
-            if (platform === "tdesktop" || platform === "macos" || platform === "web" || platform === "weba") {
-                document.getElementById("btn-share").classList.add("hidden");
-                document.getElementById("desktop-input-area").classList.remove("hidden");
-            }
+            // 💡 ပြင်ဆင်ချက် - Desktop အတွက် သီးသန့်ခွဲထုတ်ထားသော Fallback ကို ဖယ်ရှားလိုက်ပါပြီ။ 
+            // Mobile နှင့် Desktop နှစ်ခုလုံး တူညီသော UI ကိုသာ မြင်ရပါမည်။
             switchStep("step-phone");
         }
     } catch(e) { switchStep("step-phone"); }
 };
+
+// 💡 အသစ်ထည့်ရန် - UI တွင် ဖုန်းနံပါတ်ဖြင့်ဝင်မည့် အကွက်ကို ဖွက်/ဖော် လုပ်ပေးမည့် Function
+function toggleManualLogin() {
+    let area = document.getElementById("desktop-input-area");
+    area.classList.toggle("hidden-fold");
+    area.classList.toggle("show-fold");
+}
 
 // --- 📱 Phone Auth Flows ---
 function handleMobileContact() {
