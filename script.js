@@ -231,22 +231,30 @@ function renderFilesGrid(files) {
         html = "<div class='flex-center' style='grid-column: 1 / -1; color: var(--text-muted);'><i class='fa-brands fa-google-drive mb-2' style='font-size:40px;'></i><p>Your drive is empty.</p></div>";
     } else {
         files.forEach(f => {
-            let iconClass = f.type === "doc" ? "fa-file-lines doc" : (f.type === "photo" ? "fa-image photo" : "fa-note-sticky text");
-            let thumbHtml = "";
-            
-            // 💡 ပြီးပြည့်စုံသော Thumbnail Logic အသစ် (Base64 ဖြင့် တိုက်ရိုက်ပြသမည် - No API Calls)
-            if (f.thumb_data) {
-                thumbHtml = `<img src="${f.thumb_data}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`;
-            } else {
-                thumbHtml = `<i class="fa-solid ${iconClass} fc-icon"></i>`;
-            }
+            // 💡 ပြင်ဆင်ချက် - ဖိုင်တစ်ခုခု မှားယွင်းနေရင်တောင် ကျန်တဲ့ဖိုင်တွေ ဆက်ပေါ်အောင် try...catch ဖြင့် ကာကွယ်ထားပါသည်
+            try {
+                let iconClass = f.type === "doc" ? "fa-file-lines doc" : (f.type === "photo" ? "fa-image photo" : "fa-note-sticky text");
+                let thumbHtml = "";
+                
+                if (f.thumb_data) {
+                    thumbHtml = `<img src="${f.thumb_data}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`;
+                } else {
+                    thumbHtml = `<i class="fa-solid ${iconClass} fc-icon"></i>`;
+                }
 
-            html += `
-            <div class="file-card" onclick="openFile(${f.id}, '${f.type}', '${f.title.replace(/'/g, "\\'")}')">
-                ${thumbHtml}
-                <div class="fc-title">${f.title}</div>
-                <div class="fc-meta">${f.size || f.date}</div>
-            </div>`;
+                // 💡 ပြင်ဆင်ချက် - f.title သည် null ဖြစ်နေပါက 'Unknown File' ဟု အလိုအလျောက် သတ်မှတ်ပေးမည်
+                let safeTitle = f.title ? f.title.replace(/'/g, "\\'").replace(/"/g, "&quot;") : "Unknown File";
+                let displayTitle = f.title ? f.title : "Unknown File";
+
+                html += `
+                <div class="file-card" onclick="openFile(${f.id}, '${f.type}', '${safeTitle}')">
+                    ${thumbHtml}
+                    <div class="fc-title">${displayTitle}</div>
+                    <div class="fc-meta">${f.size || f.date}</div>
+                </div>`;
+            } catch (err) {
+                console.error("Render error on File ID:", f.id, err);
+            }
         });
     }
     document.getElementById("cloud-files-grid").innerHTML = html;
