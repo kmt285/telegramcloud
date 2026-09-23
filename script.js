@@ -67,7 +67,7 @@ function handleMobileContact() {
                     alert("Timeout: ချိတ်ဆက်မှု ကြန့်ကြာနေပါသည်။");
                     switchStep("step-phone");
                 }
-            }, 15000);
+            }, 30000);
         }
     });
 }
@@ -99,7 +99,12 @@ async function checkContactReceived(userId) {
             clearInterval(pollingInterval); pollingInterval = null;
             alert("Error: " + result.message); switchStep("step-phone");
         }
-    } catch(e) {}
+    } catch(e) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+        showToast("Connection Error. Please try again.", "error");
+        switchStep("step-phone");
+    }
 }
 
 async function verifyOTP() {
@@ -216,7 +221,9 @@ async function saveCloudNote() {
             method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName, text: text })
         });
         noteInput.value = ""; tg.HapticFeedback.notificationOccurred("success"); fetchCloudData(); 
-    } catch(e) {}
+    } catch(e) {
+        showToast("Failed to save note. Check connection.", "error");
+    }
     btn.innerHTML = "<i class='fa-solid fa-paper-plane'></i>"; btn.disabled = false;
 }
 
