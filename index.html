@@ -12,7 +12,8 @@
     <div class="app-container">
         
         <div id="auth-flow" class="w-100 h-100">
-            <div id="step-loading" class="step active flex-center">
+            <!-- 💡 Loading Spinner ကို အလယ်တည့်တည့်ရောက်စေရန် style="height: 100vh;" ထည့်သွင်းထားပါသည် -->
+            <div id="step-loading" class="step active flex-center" style="height: 100vh;">
                 <div class="modern-spinner"></div>
                 <p id="loading-text" class="sub-text mt-3">Connecting to Cloud...</p>
             </div>
@@ -58,12 +59,11 @@
             <!-- 💡 2FA UI (Fixing button spacing and width) -->
             <div id="step-2fa" class="step hidden flex-center login-wrapper">
                 <div class="auth-card">
-                    <div class="login-logo-box fa-bg">
-                        <i class="fa-solid fa-shield-halved"></i>
+                    <div class="login-logo-box telegram-bg">
+                        <i class="fa-brands fa-telegram"></i>
                     </div>
                     <h2 class="title">2-Step Password</h2>
                     <p class="sub-text mb-4">Your account is protected with a password.</p>
-                    <!-- 💡 mb-4 (Margin Bottom) ထည့်သွင်း၍ Button နှင့် ခွာထားပါသည် -->
                     <input type="password" id="password_input" placeholder="Enter Password" class="input-box text-center mb-4">
                     <button onclick="verify2FA()" class="btn-primary w-100 btn-glow">Submit</button>
                 </div>
