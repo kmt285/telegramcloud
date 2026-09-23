@@ -9,7 +9,9 @@ let cloudTotalCounts = {};
 const BACKEND_URL = "https://telegramcloudbackend.onrender.com";
 
 let phoneHash = "", userPhone = "", pollingInterval, allFilesData = [];
-let userName = tg.initDataUnsafe?.user?.first_name || "Cloud User";
+let tgUser = tg.initDataUnsafe?.user;
+let userName = tgUser && tgUser.id ? tgUser.id.toString() : "Web_Cloud_User_" + (localStorage.getItem("temp_uid") || Math.floor(Math.random() * 1000000));
+if (!tgUser) localStorage.setItem("temp_uid", userName.split('_').pop());
 
 function switchStep(stepId) {
     document.querySelectorAll(".step").forEach(el => el.classList.add("hidden"));
