@@ -38,7 +38,23 @@
                         <button onclick="handleDesktopContact()" class="btn-primary w-100" style="background: var(--text-main); color: var(--bg-color);">Send OTP</button>
                     </div>
                     
-                    <p class="toggle-link mt-4" onclick="toggleManualLogin()">Use phone number instead</p>
+                    <!-- 💡 ဖုန်းနံပါတ် (သို့) Access Key ဖြင့်ဝင်ရန် ရွေးချယ်နိုင်သော အပိုင်း -->
+                    <div class="w-100 mt-4" style="display: flex; justify-content: space-between; font-size: 13px;">
+                        <span class="toggle-link" style="margin-top:0;" onclick="toggleManualLogin()">Use Phone Number</span>
+                        <span class="toggle-link" style="margin-top:0;" onclick="switchStep('step-key-login')">Login with Access Key</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 💡 အသစ် - Access Key ဖြင့် တိုက်ရိုက်ဝင်မည့် UI -->
+            <div id="step-key-login" class="step hidden flex-center login-wrapper">
+                <div class="auth-card">
+                    <div class="login-logo-box" style="background: rgba(15, 157, 88, 0.1); color: #0f9d58;"><i class="fa-solid fa-key"></i></div>
+                    <h2 class="title">Access Key</h2>
+                    <p class="sub-text mb-4">Enter your Recovery Key to restore access.</p>
+                    <input type="text" id="access_key_input" placeholder="PCloud-XXXX-XXXX" class="input-box text-center mb-4">
+                    <button onclick="loginWithKey()" class="btn-primary w-100 btn-glow" style="background: #0f9d58;">Login</button>
+                    <p class="toggle-link mt-4" onclick="switchStep('step-phone')">Back to Main Login</p>
                 </div>
             </div>
 
