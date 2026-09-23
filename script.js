@@ -247,7 +247,8 @@ function loadMoreFiles() {
 function renderFilesGrid(files) {
     let html = "";
     if(files.length === 0) {
-        html = "<div class='flex-center' style='grid-column: 1 / -1; color: var(--text-muted);'><i class='fa-brands fa-google-drive mb-2' style='font-size:40px;'></i><p>Your drive is empty.</p></div>";
+        /* 💡 fa-google-drive နေရာတွင် fa-telegram ဖြင့် အစားထိုးလိုက်ပါသည် */
+        html = "<div class='flex-center' style='grid-column: 1 / -1; color: var(--text-muted);'><i class='fa-brands fa-telegram mb-2' style='font-size:40px;'></i><p>Your drive is empty.</p></div>";
     } else {
         files.forEach(f => {
             try {
