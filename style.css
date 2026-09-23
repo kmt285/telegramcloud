@@ -155,8 +155,6 @@ body { background: var(--bg-color); color: var(--text-main); height: 100vh; over
 
 .hidden-fold { display: none; opacity: 0; }
 .show-fold { display: block; opacity: 1; animation: foldDown 0.3s ease-out forwards; }
-.toggle-link { color: var(--text-muted); font-size: 13px; text-decoration: underline; cursor: pointer; transition: color 0.2s; }
-.toggle-link:hover { color: var(--primary-blue); }
 
 /* 💡 Input နှင့် Button ကြား ကပ်မနေစေရန် သီးသန့် Margin */
 .mb-4 { margin-bottom: 24px !important; }
@@ -165,4 +163,28 @@ body { background: var(--bg-color); color: var(--text-main); height: 100vh; over
 @keyframes foldDown { 
     from { opacity: 0; transform: translateY(-10px); } 
     to { opacity: 1; transform: translateY(0); } 
+}
+
+/* 💡 Number Input မှ အတက်/အဆင်း Arrow များကို အပြီးတိုင် ဖျောက်ရန် */
+input[type="number"]::-webkit-inner-spin-button, 
+input[type="number"]::-webkit-outer-spin-button { 
+    -webkit-appearance: none; 
+    margin: 0; 
+}
+input[type="number"] {
+    -moz-appearance: textfield; /* Firefox အတွက် */
+}
+
+/* 💡 Button နှင့် ကပ်မနေစေရန် margin-top တိုးထားပြီး display: inline-block သတ်မှတ်ထားပါသည် */
+.toggle-link { 
+    color: var(--text-muted); 
+    font-size: 13px; 
+    text-decoration: underline; 
+    cursor: pointer; 
+    transition: color 0.2s; 
+    margin-top: 24px; 
+    display: inline-block; 
+}
+.toggle-link:hover { 
+    color: var(--primary-blue); 
 }
