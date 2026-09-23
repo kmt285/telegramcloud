@@ -122,7 +122,7 @@ async function verify2FA() {
     } catch(e) { alert("Verification Failed."); switchStep("step-2fa"); }
 }
 
-// --- ☁️ CLOUD DASHBOARD FUNCTIONS ---
+// --- ☁️ CLOUD DASHBOARD FUNCTIONS (Auto Logout ဖြင့်) ---
 async function fetchCloudData() {
     let statusText = document.getElementById("cloud-status");
     let grid = document.getElementById("cloud-files-grid");
@@ -140,8 +140,19 @@ async function fetchCloudData() {
             allFilesData = result.files;
             statusText.innerText = `${allFilesData.length} items synced.`;
             renderFilesGrid(allFilesData);
-        } else { statusText.innerText = "Sync failed."; }
-    } catch(e) { statusText.innerText = "Connection error."; }
+        } else {
+            // 💡 Session Expired ဖြစ်သွားလျှင် User အား အသိပေးပြီး Login Page သို့ ပြန်ပို့မည်
+            if (result.session_expired) {
+                tg.HapticFeedback.notificationOccurred("error");
+                alert("Session Expired: သင်၏ အကောင့် Terminate လုပ်ခံရသဖြင့် ပြန်လည် ချိတ်ဆက်ပေးပါ။");
+                window.location.reload(); // App ကို အစမှ ပြန်ဖွင့်ခိုင်းမည်
+            } else {
+                statusText.innerText = "Sync failed.";
+            }
+        }
+    } catch(e) { 
+        statusText.innerText = "Connection error."; 
+    }
 }
 
 function renderFilesGrid(files) {
