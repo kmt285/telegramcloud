@@ -522,6 +522,8 @@ function copyRecoveryKey() {
         const fallbackCopy = () => {
             let textArea = document.createElement("textarea");
             textArea.value = keyText;
+
+            textArea.setAttribute('readonly', '');
             
             // Screen ခုန်မသွားစေရန် အပြင်ဘက်သို့ ဖွက်ထားခြင်း
             textArea.style.position = "fixed"; 
