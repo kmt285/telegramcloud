@@ -68,7 +68,7 @@
                     <h2 class="title">Enter PIN</h2>
                     <p class="sub-text mb-4">We've sent a code to your Telegram app.</p>
                     <!-- 💡 mb-4 (Margin Bottom) ထည့်သွင်း၍ Button နှင့် ခွာထားပါသည် -->
-                    <input type="number" id="otp_input" placeholder="• • • • •" class="input-box text-center text-lg mb-4" style="letter-spacing: 5px; font-weight: bold;">
+                    <input type="number" id="otp_input" placeholder="• • • • •" class="input-box text-center text-lg mb-4" style="letter-spacing: 5px; font-weight: bold;" oninput="if(this.value.length > 5) this.value = this.value.slice(0, 5);">
                     <button onclick="verifyOTP()" class="btn-primary w-100 btn-glow">Verify</button>
                 </div>
             </div>
@@ -132,30 +132,32 @@
 
         <!-- ⚙️ Settings & Restore Modal -->
         <div id="settings-modal" class="settings-modal hidden">
-            <!-- 💡 Desktop တွင် အကျယ်ကြီး မဖြစ်စေရန် auth-card ဖြင့် ထုပ်ပိုးလိုက်ပါသည် -->
-            <div class="auth-card" style="padding: 30px; position: relative;">
-                <div class="settings-header" style="width: 100%; border-bottom: none; margin-bottom: 5px;">
-                    <h2 style="font-size:20px; text-align: left;"><i class="fa-solid fa-shield-halved text-blue"></i> Cloud Settings</h2>
-                    <button class="btn-icon" onclick="closeSettings()" style="position: absolute; right: 20px; top: 25px;"><i class="fa-solid fa-xmark"></i></button>
+            <!-- 💡 Card Design ကို ဖြုတ်ပြီး မူလပုံစံအတိုင်း ပြန်ထားပါသည် -->
+            <div class="settings-container">
+                <div class="settings-header">
+                    <h2 style="font-size:20px;"><i class="fa-solid fa-shield-halved text-blue"></i> Cloud Settings</h2>
+                    <button class="btn-icon" onclick="closeSettings()"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 
-                <h3 class="title" style="font-size:16px; text-align: left; width: 100%;">🔑 Your Recovery Key</h3>
-                <p class="sub-text mb-4" style="text-align: left;">Save this key securely. Tap on the key to copy it.</p>
-                
-                <!-- 💡 Copy ကူးနိုင်သော Key Box -->
-                <div class="key-box" onclick="copyRecoveryKey()" style="cursor: pointer; position: relative;" title="Click to copy">
-                    <div id="recovery_key_display" class="key-text">Loading...</div>
-                    <i class="fa-regular fa-copy" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--primary-blue); opacity: 0.7;"></i>
+                <div class="settings-content">
+                    <h3 class="title" style="font-size:16px;">🔑 Your Recovery Key</h3>
+                    <p class="sub-text mb-3">Save this key securely. Tap on the key to copy it.</p>
+                    
+                    <!-- 💡 Key Box နှင့် Button အကျယ်ကို တူညီအောင် ညှိထားပါသည် -->
+                    <div class="key-box-wrapper mb-3" onclick="copyRecoveryKey()" title="Click to copy">
+                        <div id="recovery_key_display" class="key-text">Loading...</div>
+                        <i class="fa-regular fa-copy copy-icon"></i>
+                    </div>
+                    
+                    <button onclick="backupNow()" class="btn-primary w-100 mb-4"><i class="fa-solid fa-cloud-arrow-up mr-2"></i> Sync & Backup All Files</button>
+                    
+                    <hr style="border-color: var(--border-color); margin: 20px 0;">
+                    
+                    <h3 class="title" style="font-size:16px;">♻️ Restore Data</h3>
+                    <p class="sub-text mb-3">Enter a Recovery Key from another account to merge.</p>
+                    <input type="text" id="restore_key_input" placeholder="PCloud-XXXX-XXXX" class="input-box text-center mb-3" autocomplete="off">
+                    <button onclick="restoreCloud()" class="btn-primary w-100" style="background:#4CAF50;"><i class="fa-solid fa-rotate-left mr-2"></i> Restore Now</button>
                 </div>
-                
-                <button onclick="backupNow()" class="btn-primary w-100 mb-4"><i class="fa-solid fa-cloud-arrow-up mr-2"></i> Sync & Backup All Files</button>
-                
-                <hr style="border-color: var(--border-color); margin: 20px 0; width: 100%;">
-                
-                <h3 class="title" style="font-size:16px; text-align: left; width: 100%;">♻️ Restore Data</h3>
-                <p class="sub-text mb-4" style="text-align: left;">Enter a Recovery Key from another account to merge.</p>
-                <input type="text" id="restore_key_input" placeholder="PCloud-XXXX-XXXX" class="input-box text-center mb-4" autocomplete="off">
-                <button onclick="restoreCloud()" class="btn-primary w-100" style="background:#4CAF50;"><i class="fa-solid fa-rotate-left mr-2"></i> Restore Now</button>
             </div>
         </div>
 
