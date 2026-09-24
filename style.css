@@ -69,12 +69,13 @@ body { background: var(--bg-color); color: var(--text-main); height: 100vh; over
 
 
 @media (max-width: 768px) {
-    .sidebar { display: none; }
+    /* 💡 ပြင်ဆင်ချက် - Mobile တွင် Sidebar အား လုံးဝ ဖျောက်ထားမည် */
+    .sidebar { display: none !important; }
+    
     .bottom-nav { display: flex; }
     .upload-bar { bottom: 60px; } 
     .content-area { padding-bottom: 140px; }
 }
-
 /* 💡 Toast Notification UX */
 .toast {
     position: fixed;
