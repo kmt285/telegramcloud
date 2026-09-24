@@ -89,15 +89,28 @@
 
         <div id="step-success" class="step hidden drive-layout">
             <aside class="sidebar">
-                <h2 class="brand"><i class="fa-brands fa-telegram text-blue"></i> Telegram Cloud</h2>
-                <ul class="nav-links">
-                    <li class="active" onclick="filterFiles('all', this)"><i class="fa-solid fa-folder"></i> My Drive</li>
-                    <li onclick="filterFiles('photo', this)"><i class="fa-solid fa-image"></i> Photos</li>
-                    <li onclick="filterFiles('video', this)"><i class="fa-solid fa-film"></i> Videos</li>
-                    <li onclick="filterFiles('doc', this)"><i class="fa-solid fa-file-lines"></i>  Documents</li>
-                    <li onclick="filterFiles('link', this)"><i class="fa-solid fa-link"></i>Links</li>
-                    <li onclick="filterFiles('text', this)"><i class="fa-solid fa-note-sticky"></i> Notes</li>
-                </ul>
+                <!-- 💡 အပေါ်ပိုင်း (Logo နှင့် Menu များ) -->
+                <div class="sidebar-top">
+                    <!-- 💡 ID ထည့်သွင်းထားသည် (JS မှ နာမည်လှမ်းချိန်းရန်) -->
+                    <h2 class="brand" id="sidebar-brand-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 18px;">
+                        <i class="fa-brands fa-telegram text-blue"></i> Cloud
+                    </h2>
+                    <ul class="nav-links">
+                        <li class="active" onclick="filterFiles('all', this)"><i class="fa-solid fa-folder"></i> My Drive</li>
+                        <li onclick="filterFiles('photo', this)"><i class="fa-solid fa-image"></i> Photos</li>
+                        <li onclick="filterFiles('video', this)"><i class="fa-solid fa-film"></i> Videos</li>
+                        <li onclick="filterFiles('doc', this)"><i class="fa-solid fa-file-lines"></i> Documents</li>
+                        <li onclick="filterFiles('link', this)"><i class="fa-solid fa-link"></i> Links</li>
+                        <li onclick="filterFiles('text', this)"><i class="fa-solid fa-note-sticky"></i> Notes</li>
+                    </ul>
+                </div>
+                
+                <!-- 💡 အသစ် - Desktop အတွက် အောက်ခြေ Storage UI -->
+                <div class="storage-box">
+                    <div class="storage-header"><i class="fa-solid fa-cloud text-blue"></i> Storage</div>
+                    <div class="progress-bar"><div class="progress-fill"></div></div>
+                    <div class="storage-text" id="sidebar-storage-text">Calculating...</div>
+                </div>
             </aside>
             <main class="main-content">
                 <header class="topbar">
@@ -140,6 +153,12 @@
                 </div>
                 
                 <div class="settings-content">
+                    <!-- 💡 အသစ် - Mobile အတွက် Settings ထဲရှိ Storage UI -->
+                    <div class="w-100 mb-4" style="background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                        <div class="storage-header" style="margin-bottom: 10px;"><i class="fa-solid fa-cloud text-blue"></i> Storage (Unlimited)</div>
+                        <div class="progress-bar" style="margin-bottom: 8px;"><div class="progress-fill"></div></div>
+                        <div class="storage-text" id="settings-storage-text">Calculating...</div>
+                    </div>
                     <h3 class="title" style="font-size:16px;">🔑 Your Recovery Key</h3>
                     <p class="sub-text mb-3">Save this key securely. Tap on the key to copy it.</p>
                     
