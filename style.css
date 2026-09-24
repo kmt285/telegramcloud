@@ -323,11 +323,12 @@ input[type="number"] {
 }
 
 .progress-fill {
-    width: 100%;
+    width: 3%; /* 
     height: 100%;
-    background: linear-gradient(90deg, #1a73e8, #4285f4); /* Telegram Blue Gradient */
+    background: linear-gradient(90deg, #1a73e8, #4285f4);
     border-radius: 4px;
-    animation: pulseGlow 2s infinite alternate; /* Unlimited ဖြစ်ကြောင်း ညွှန်းဆိုရန် Glow Effect */
+    transition: width 0.5s ease; /* 💡 အသစ် - Bar အရှည်ပြောင်းလဲမှုကို ချောမွေ့စေရန် */
+    animation: pulseGlow 2s infinite alternate; 
 }
 
 .storage-text {
