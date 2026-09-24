@@ -21,19 +21,28 @@ function switchStep(stepId) {
 
 function setLoadingText(text) { document.getElementById("loading-text").innerText = text; }
 
+// 💡 Telegram Name/Username (သို့) Account Name ကို Sidebar တွင် ပြသခြင်း
 function setDisplayUsername() {
     let brandEl = document.getElementById("sidebar-brand-name");
-    if(brandEl && tgUser) {
-        let displayName = "";
+    if(!brandEl) return;
+    
+    let displayName = "Telegram Cloud"; // Default Name
+
+    if (tgUser) {
         if (tgUser.username) {
             displayName = "@" + tgUser.username;
-        } else {
+        } else if (tgUser.first_name || tgUser.last_name) {
             let first = tgUser.first_name || "";
             let last = tgUser.last_name || "";
-            displayName = (first + " " + last).trim() || "Telegram Cloud";
+            displayName = (first + " " + last).trim();
         }
-        brandEl.innerHTML = `<i class="fa-brands fa-telegram text-blue"></i> ${displayName}`;
+    } 
+    // 💡 ပြင်ဆင်ချက် - tgUser မရရှိပါက Database ထဲရှိ Account Name ကို ပြသမည်
+    else if (userName && !userName.startsWith("Web_Cloud_User_")) {
+        displayName = userName; 
     }
+
+    brandEl.innerHTML = `<i class="fa-brands fa-telegram text-blue"></i> ${displayName}`;
 }
 
 // --- 💡 Auto Login Check ---
@@ -505,6 +514,8 @@ async function loginWithKey() {
             if (userName.includes("Web_Cloud_User_")) {
                 localStorage.setItem("temp_uid", userName.replace("Web_Cloud_User_", ""));
             }
+            
+            setDisplayUsername(); // 💡 ပြင်ဆင်ချက် - Key ဖြင့် ဝင်လိုက်သောအခါ နာမည်ကို ချက်ချင်း ပြောင်းပေးမည်
             
             switchStep("step-success");
             if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
