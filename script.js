@@ -609,7 +609,7 @@ function updateStorageUI() {
     let settingsText = document.getElementById("settings-storage-text");
     if (settingsText) settingsText.innerText = storageString;
 
-    let visualPercent = Math.max(2, Math.min((totalMB / 1048576) * 100, 85));
+    let visualPercent = Math.max(3, Math.min((totalMB / 1048576) * 100, 85));
     
     document.querySelectorAll('.progress-fill').forEach(el => {
         el.style.width = visualPercent + '%';
