@@ -506,15 +506,51 @@ async function loginWithKey() {
     }
 }
 
-// 💡 အသစ် - Recovery Key ကို Click နှိပ်၍ Copy ကူးမည့် Function
+// 💡 Recovery Key ကို Click နှိပ်၍ Copy ကူးမည့် Function (Mini App & Web အားလုံးအတွက်)
 function copyRecoveryKey() {
     let keyText = document.getElementById("recovery_key_display").innerText;
+    
     if (keyText && keyText !== "Loading..." && keyText !== "Error loading key") {
-        navigator.clipboard.writeText(keyText).then(() => {
+        
+        // Copy ကူးအောင်မြင်ကြောင်း ပြသမည့် UI Function
+        const showSuccess = () => {
             showToast("<i class='fa-solid fa-check mr-2'></i> Key Copied to Clipboard!", "success");
             if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-        }).catch(err => {
-            showAlert("Failed to copy. Please copy it manually.", "Error");
-        });
+        };
+
+        // 💡 Telegram Mini App (WebView) များအတွက် Fallback Method
+        const fallbackCopy = () => {
+            let textArea = document.createElement("textarea");
+            textArea.value = keyText;
+            
+            // Screen ခုန်မသွားစေရန် အပြင်ဘက်သို့ ဖွက်ထားခြင်း
+            textArea.style.position = "fixed"; 
+            textArea.style.left = "-99999px";
+            textArea.style.top = "-99999px";
+            document.body.appendChild(textArea);
+            
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                let successful = document.execCommand('copy');
+                if (successful) showSuccess();
+                else showAlert("Failed to copy. Please copy it manually.", "Error");
+            } catch (err) {
+                showAlert("Failed to copy. Please copy it manually.", "Error");
+            }
+            document.body.removeChild(textArea);
+        };
+
+        // 💡 Web Browser များအတွက် Modern API ဖြင့် ဦးစွာစမ်းသပ်ခြင်း
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(keyText).then(showSuccess).catch(err => {
+                // Modern API ငြင်းပယ်ခံရပါက Fallback ကို အလိုအလျောက် သုံးမည်
+                fallbackCopy(); 
+            });
+        } else {
+            // လုံခြုံရေးကန့်သတ်ထားသော Mini App များအတွက် တိုက်ရိုက် Fallback သုံးမည်
+            fallbackCopy();
+        }
     }
 }
