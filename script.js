@@ -21,6 +21,21 @@ function switchStep(stepId) {
 
 function setLoadingText(text) { document.getElementById("loading-text").innerText = text; }
 
+function setDisplayUsername() {
+    let brandEl = document.getElementById("sidebar-brand-name");
+    if(brandEl && tgUser) {
+        let displayName = "";
+        if (tgUser.username) {
+            displayName = "@" + tgUser.username;
+        } else {
+            let first = tgUser.first_name || "";
+            let last = tgUser.last_name || "";
+            displayName = (first + " " + last).trim() || "Telegram Cloud";
+        }
+        brandEl.innerHTML = `<i class="fa-brands fa-telegram text-blue"></i> ${displayName}`;
+    }
+}
+
 // --- 💡 Auto Login Check ---
 window.onload = async () => {
     switchStep("step-loading");
@@ -204,8 +219,8 @@ async function fetchCloudData(isLoadMore = false) {
             });
             localStorage.setItem(`cloudData_${userName}`, JSON.stringify(cacheData));
             
-            // 💡 UI သို့ Data များ ပြန်လည်ရေးဆွဲမည်
             updateCategoryStatus();
+            updateStorageUI(); // 💡 အသစ် - Storage ကို တွက်ချက်ပြီး ပြသမည်
             renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 
             // 💡 နောက်တစ်ခါ Load More နှိပ်ရန် offset ကို မှတ်ထားမည်
@@ -555,4 +570,34 @@ function copyRecoveryKey() {
             fallbackCopy();
         }
     }
+}
+
+// 💡 အသစ် - သိမ်းထားသော ဖိုင်များ၏ Size များကို ပေါင်း၍ GB/MB ဖြင့် ပြသမည့် Function
+function updateStorageUI() {
+    let totalMB = 0;
+    
+    // ဖိုင်အားလုံး၏ size (ဥပမာ "12.5 MB") ကို ကိန်းဂဏန်းအဖြစ် ပြောင်းလဲပေါင်းထည့်မည်
+    allFilesData.forEach(f => {
+        if(f.size) {
+            let num = parseFloat(f.size.replace(/[^\d.-]/g, '')); // စာသားထဲမှ ဂဏန်းကိုသာ ဆွဲထုတ်ခြင်း
+            if(!isNaN(num)) totalMB += num;
+        }
+    });
+
+    let displaySize = "";
+    if (totalMB >= 1024) {
+        displaySize = (totalMB / 1024).toFixed(2) + " GB";
+    } else {
+        displaySize = totalMB.toFixed(1) + " MB";
+    }
+
+    let storageString = `${displaySize} of Unlimited used`;
+    
+    // Desktop တွင် ပြမည်
+    let sidebarText = document.getElementById("sidebar-storage-text");
+    if (sidebarText) sidebarText.innerText = storageString;
+    
+    // Mobile တွင် ပြမည်
+    let settingsText = document.getElementById("settings-storage-text");
+    if (settingsText) settingsText.innerText = storageString;
 }
