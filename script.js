@@ -87,7 +87,11 @@ function handleMobileContact() {
 async function handleDesktopContact() {
     let phone = document.getElementById("manual_phone").value.trim();
     if (!phone) return showAlert("ဖုန်းနံပါတ် ရိုက်ထည့်ပါ။", "Notice");
-    if (!phone.startsWith("+")) phone = "+" + phone;
+    if (phone.startsWith("09")) {
+        phone = "+95" + phone.substring(1);
+    } else if (!phone.startsWith("+")) {
+        phone = "+" + phone;
+    }
     userPhone = phone;
     setLoadingText("Sending code...");
     switchStep("step-loading");
@@ -499,5 +503,18 @@ async function loginWithKey() {
     } catch(e) {
         showAlert("Connection Failed. Please check your internet.", "Error");
         switchStep("step-key-login");
+    }
+}
+
+// 💡 အသစ် - Recovery Key ကို Click နှိပ်၍ Copy ကူးမည့် Function
+function copyRecoveryKey() {
+    let keyText = document.getElementById("recovery_key_display").innerText;
+    if (keyText && keyText !== "Loading..." && keyText !== "Error loading key") {
+        navigator.clipboard.writeText(keyText).then(() => {
+            showToast("<i class='fa-solid fa-check mr-2'></i> Key Copied to Clipboard!", "success");
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+        }).catch(err => {
+            showAlert("Failed to copy. Please copy it manually.", "Error");
+        });
     }
 }
