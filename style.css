@@ -103,26 +103,70 @@ body { background: var(--bg-color); color: var(--text-main); height: 100vh; over
     to { opacity: 0; bottom: 60px; } 
 }
 
-/* ⚙️ Settings Modal */
-/* ⚙️ Settings Modal (Desktop Responsive) */
+/* ⚙️ Settings Modal (မူလပုံစံသို့ ပြန်ပြောင်းထားသည်) */
 .settings-modal { 
     position: fixed; top:0; left:0; width:100%; height:100%; 
-    background: rgba(0, 0, 0, 0.5); /* နောက်ခံကို အမည်းရောင် Blur လေးဖြစ်စေရန် */
-    backdrop-filter: blur(3px);
+    background: var(--bg-color); /* 💡 နောက်ခံကို အပြည့်ပြန်လုပ်ထားပါသည် */
     z-index: 2000; 
-    padding: 20px; 
     display: flex; 
-    align-items: center; /* အလယ်တည့်တည့်ရောက်စေရန် */
-    justify-content: center; 
-    overflow-y: auto; 
+    flex-direction: column;
+    align-items: center; 
 }
 
-.key-box:hover {
-    background: rgba(26, 115, 232, 0.15); /* Hover လုပ်လျှင် အရောင်ပြောင်းရန် */
+.settings-container {
+    width: 100%;
+    max-width: 600px; /* Desktop တွင် အလွန်ကြီးမသွားစေရန် ထိန်းထားသည် */
+    height: 100%;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
 }
-.settings-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px; }
-.key-box { background: rgba(26, 115, 232, 0.1); border: 1px dashed var(--primary-blue); padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
-.key-text { font-size: 18px; font-weight: bold; color: var(--primary-blue); letter-spacing: 1px; }
+
+.settings-header { 
+    display: flex; justify-content: space-between; align-items: center; 
+    border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px; 
+    width: 100%;
+}
+
+.settings-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+}
+
+/* 💡 Key Box နှင့် Button အကျယ်ကို တူညီအောင် ပြင်ဆင်ထားသည် */
+.key-box-wrapper {
+    width: 100%;
+    background: rgba(26, 115, 232, 0.05);
+    border: 1px dashed var(--primary-blue);
+    padding: 14px;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+}
+
+.key-box-wrapper:hover {
+    background: rgba(26, 115, 232, 0.1);
+}
+
+.key-text { 
+    font-size: 16px; font-weight: bold; color: var(--primary-blue); letter-spacing: 1px; 
+    padding-right: 25px; /* Copy Icon နှင့် မရောစေရန် နေရာချန်ထားသည် */
+}
+
+/* 💡 Copy Icon ကို ညာဘက်အစွန်တွင် သီးသန့်ထားရှိသည် */
+.copy-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--primary-blue);
+    opacity: 0.6;
+}
 
 /* 💡 Professional Login UI Enhancements (Responsive) */
 .login-wrapper { 
