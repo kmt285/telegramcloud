@@ -296,12 +296,24 @@ function renderFilesGrid(files) {
 
                 let safeTitle = f.title ? f.title.replace(/'/g, "\\'").replace(/"/g, "&quot;") : "Unknown File";
                 let displayTitle = f.title ? f.title : "Unknown File";
+                
+                // 💡 အသစ် - Server မှပေးသော Timestamp ကို User ၏ Local Time အဖြစ် ပြောင်းလဲခြင်း
+                let dateStr = "";
+                if (f.timestamp) {
+                    let d = new Date(f.timestamp * 1000);
+                    let months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                    let hours = d.getHours();
+                    let minutes = d.getMinutes().toString().padStart(2, '0');
+                    dateStr = `${d.getDate()} ${months[d.getMonth()]}, ${hours}:${minutes}`;
+                } else {
+                    dateStr = f.date || ""; // Fallback
+                }
 
                 html += `
                 <div class="file-card" onclick="openFile(${f.id}, '${f.type}', '${safeTitle}')">
                     ${thumbHtml}
                     <div class="fc-title">${displayTitle}</div>
-                    <div class="fc-meta">${f.size || f.date}</div>
+                    <div class="fc-meta">${f.size || dateStr}</div>
                 </div>`;
             } catch (err) {}
         });
@@ -587,18 +599,31 @@ function copyRecoveryKey() {
 function updateStorageUI() {
     let totalMB = 0;
     
-    allFilesData.forEach(f => {
-        if(f.size) {
-            let num = parseFloat(f.size.replace(/[^\d.-]/g, ''));
-            if(!isNaN(num)) totalMB += num;
-        }
-    });
+    // ဖိုင်အားလုံးကို လှည့်ပတ်စစ်ဆေးပြီး size ကို ပေါင်းထည့်မည်
+    if (allFilesData && allFilesData.length > 0) {
+        allFilesData.forEach(f => {
+            if(f.size && typeof f.size === "string") {
+                // "2.65 MB" သို့မဟုတ် "1.2 GB" ကဲ့သို့သော စာသားများမှ ကိန်းဂဏန်းကို ဆွဲထုတ်မည်
+                let num = parseFloat(f.size.replace(/[^\d.-]/g, ''));
+                if(!isNaN(num)) {
+                    // GB ဖြင့် ပြထားပါက MB သို့ အရင်ပြောင်းပြီးမှ ပေါင်းမည်
+                    if (f.size.includes("GB")) {
+                        totalMB += (num * 1024);
+                    } else {
+                        totalMB += num;
+                    }
+                }
+            }
+        });
+    }
 
-    let displaySize = "";
-    if (totalMB >= 1024) {
-        displaySize = (totalMB / 1024).toFixed(2) + " GB";
-    } else {
-        displaySize = totalMB.toFixed(1) + " MB";
+    let displaySize = "0.0 MB";
+    if (totalMB > 0) {
+        if (totalMB >= 1024) {
+            displaySize = (totalMB / 1024).toFixed(2) + " GB";
+        } else {
+            displaySize = totalMB.toFixed(1) + " MB";
+        }
     }
 
     let storageString = `${displaySize} of Unlimited used`;
