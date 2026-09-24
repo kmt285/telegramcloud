@@ -583,14 +583,13 @@ function copyRecoveryKey() {
     }
 }
 
-// 💡 အသစ် - သိမ်းထားသော ဖိုင်များ၏ Size များကို ပေါင်း၍ GB/MB ဖြင့် ပြသမည့် Function
+// 💡 သိမ်းထားသော ဖိုင်များ၏ Size များကို ပေါင်း၍ GB/MB ဖြင့် ပြသမည့် Function
 function updateStorageUI() {
     let totalMB = 0;
     
-    // ဖိုင်အားလုံး၏ size (ဥပမာ "12.5 MB") ကို ကိန်းဂဏန်းအဖြစ် ပြောင်းလဲပေါင်းထည့်မည်
     allFilesData.forEach(f => {
         if(f.size) {
-            let num = parseFloat(f.size.replace(/[^\d.-]/g, '')); // စာသားထဲမှ ဂဏန်းကိုသာ ဆွဲထုတ်ခြင်း
+            let num = parseFloat(f.size.replace(/[^\d.-]/g, ''));
             if(!isNaN(num)) totalMB += num;
         }
     });
@@ -604,11 +603,15 @@ function updateStorageUI() {
 
     let storageString = `${displaySize} of Unlimited used`;
     
-    // Desktop တွင် ပြမည်
     let sidebarText = document.getElementById("sidebar-storage-text");
     if (sidebarText) sidebarText.innerText = storageString;
     
-    // Mobile တွင် ပြမည်
     let settingsText = document.getElementById("settings-storage-text");
     if (settingsText) settingsText.innerText = storageString;
+
+    let visualPercent = Math.max(2, Math.min((totalMB / 1048576) * 100, 85));
+    
+    document.querySelectorAll('.progress-fill').forEach(el => {
+        el.style.width = visualPercent + '%';
+    });
 }
