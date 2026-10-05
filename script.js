@@ -431,20 +431,6 @@ async function openSettings() {
 
 function closeSettings() { document.getElementById("settings-modal").classList.add("hidden"); }
 
-async function backupNow() {
-    let btn = event.target.closest('button');
-    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> Backing up..."; btn.disabled = true;
-    try {
-        let res = await fetch(`${BACKEND_URL}/api/backup_all`, {
-            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName })
-        });
-        let result = await res.json();
-        if(result.success) showToast(`<i class='fa-solid fa-check mr-2'></i> ${result.count} files securely backed up!`, "success");
-        else showToast("Backup failed.", "error");
-    } catch(e) { showToast("Connection error.", "error"); }
-    btn.innerHTML = "<i class='fa-solid fa-cloud-arrow-up mr-2'></i> Sync & Backup All Files"; btn.disabled = false;
-}
-
 async function restoreCloud() {
     let keyInput = document.getElementById("restore_key_input").value.trim();
     if(!keyInput) return showAlert("Please enter a Recovery Key.", "Notice");
@@ -458,8 +444,11 @@ async function restoreCloud() {
         let result = await res.json();
         if(result.success) {
             closeSettings();
-            showToast(`<i class='fa-solid fa-check mr-2'></i> Successfully restored ${result.count} files!`, "success");
-            fetchCloudData(); // Data အသစ်များကို ချက်ချင်း ပြန်ဆွဲပြမည်
+            showToast(`<i class='fa-solid fa-check mr-2'></i> မျှဝေထားသော ဖိုင် ${result.count} ခုကို သင့်အကောင့်သို့ အောင်မြင်စွာ ကူးယူလိုက်ပါပြီ!`, "success");
+            
+            // UI တွင် ဖိုင်အသစ်များ ချက်ချင်းပေါ်လာစေရန် အစကနေ ပြန်ဆွဲမည်
+            document.getElementById('current-category').innerText = 'My Drive';
+            fetchCloudData(); 
         } else {
             showAlert(result.message || "Invalid Key.", "Error");
         }
