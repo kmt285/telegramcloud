@@ -493,3 +493,35 @@ function updateStorageUI() {
     let visualPercent = Math.max(3, Math.min((totalMB / 1048576) * 100, 85));
     document.querySelectorAll('.progress-fill').forEach(el => el.style.width = visualPercent + '%');
 }
+
+// 🔒 လုံခြုံရေး အဆင့် (၃) - Real-time Session Killer (၅ စက္ကန့် တစ်ခါ အသက်ဝင်နေမလား စစ်ဆေးမည်)
+setInterval(async () => {
+    let successStep = document.getElementById("step-success");
+    
+    // Cloud မျက်နှာပြင်ကို ရောက်နေမှသာ Background ကနေ စစ်ဆေးမည်
+    if (successStep && !successStep.classList.contains("hidden")) {
+        try {
+            let res = await fetch(`${BACKEND_URL}/api/check_session`, {
+                method: "POST", headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ name: userName })
+            });
+            let result = await res.json();
+            
+            // 🚨 Admin က Session ဖြတ်လိုက်တာနဲ့ ချက်ချင်း Data တွေဖျက်ပြီး Login Screen ကို ကန်ထုတ်မည်
+            if (result && !result.exists) {
+                // Device ထဲမှာ ကျန်နေတဲ့ Cache Data တွေ အားလုံးကို ရှင်းထုတ်မည်
+                localStorage.removeItem(`cloudData_${userName}`);
+                localStorage.removeItem(`cloudCounts_${userName}`);
+                localStorage.removeItem("temp_uid");
+                
+                // Alert ပြပြီး App ကို Reload လုပ်ကာ Login မျက်နှာပြင်သို့ ပို့မည်
+                tg.HapticFeedback.notificationOccurred("error");
+                showAlert("လုံခြုံရေးအရ အကောင့်ပိတ်သွားပါသည်။ ပြန်လည် Login ဝင်ပေးပါ။", "Session Terminated", () => {
+                    window.location.reload(); 
+                });
+            }
+        } catch(e) {
+            // Network Error ဖြစ်ပါက ကျော်သွားမည်
+        }
+    }
+}, 5000); // ၅ စက္ကန့် တစ်ခါ (5000ms) တိတိကျကျ စစ်ဆေးမည်
