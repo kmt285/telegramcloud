@@ -444,7 +444,7 @@ async function restoreCloud() {
         let result = await res.json();
         if(result.success) {
             closeSettings();
-            showToast(`<i class='fa-solid fa-check mr-2'></i> မျှဝေထားသော ဖိုင် ${result.count} ခုကို သင့်အကောင့်သို့ အောင်မြင်စွာ ကူးယူလိုက်ပါပြီ!`, "success");
+            showToast(`<i class='fa-solid fa-check mr-2'></i> Files ${result.count} have been successfully copied to your account!`, "success");
             
             // UI တွင် ဖိုင်အသစ်များ ချက်ချင်းပေါ်လာစေရန် အစကနေ ပြန်ဆွဲမည်
             document.getElementById('current-category').innerText = 'My Drive';
