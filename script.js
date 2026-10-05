@@ -221,12 +221,7 @@ async function fetchCloudData(isLoadMore = false) {
                 localStorage.setItem(`cloudCounts_${userName}`, JSON.stringify(cloudTotalCounts));
             }
 
-            // 💡 Base64 ပုံများကို ဖယ်ထုတ်ပြီးမှ LocalStorage တွင် သိမ်းမည် (Browser Quota Limit မဖြစ်စေရန်)
-            let cacheData = allFilesData.map(f => {
-                let { thumb_data, ...rest } = f; 
-                return rest;
-            });
-            localStorage.setItem(`cloudData_${userName}`, JSON.stringify(cacheData));
+            localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
             
             updateCategoryStatus();
             updateStorageUI(); // 💡 အသစ် - Storage ကို တွက်ချက်ပြီး ပြသမည်
@@ -288,7 +283,9 @@ function renderFilesGrid(files) {
                 else if (f.type === "text") iconClass = "fa-note-sticky text";
                 
                 let thumbHtml = "";
-                if (f.thumb_data) {
+                if (f.thumb_file_id) {
+                    thumbHtml = `<img src="${BACKEND_URL}/api/thumb/${f.thumb_file_id}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`;
+                } else if (f.thumb_data) {
                     thumbHtml = `<img src="${f.thumb_data}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`;
                 } else {
                     thumbHtml = `<i class="fa-solid ${iconClass} fc-icon"></i>`;
