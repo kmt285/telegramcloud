@@ -91,7 +91,7 @@
                         <li onclick="filterFiles('video', this)"><i class="fa-solid fa-film"></i> Videos</li>
                         <li onclick="filterFiles('doc', this)"><i class="fa-solid fa-file-lines"></i> Documents</li>
                         <li onclick="filterFiles('link', this)"><i class="fa-solid fa-link"></i> Links</li>
-                        <li onclick="filterFiles('text', this)"><i class="fa-solid fa-note-sticky"></i> Notes</li>
+                    
                     </ul>
                 </div>
                 
@@ -128,9 +128,10 @@
                     </div>
                 </div>
 
-                <div class="upload-bar" id="upload-bar">
-                    <input type="text" id="note_input" placeholder="Type a note to save to cloud..." class="input-box-alt">
-                    <button onclick="saveCloudNote()" class="btn-upload"><i class="fa-solid fa-paper-plane"></i></button>
+                <div class="upload-bar flex-center" id="upload-bar" style="padding: 10px 20px;">
+                    <button onclick="goToBotForUpload()" class="btn-primary w-100 btn-glow" style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Upload File
+                    </button>
                 </div>
             </main>
             <nav class="bottom-nav">
@@ -139,7 +140,6 @@
                 <div class="nav-item" onclick="filterFiles('video', this)"><i class="fa-solid fa-film"></i><span>Videos</span></div>
                 <div class="nav-item" onclick="filterFiles('doc', this)"><i class="fa-solid fa-file-lines"></i><span>Docs</span></div>
                 <div class="nav-item" onclick="filterFiles('link', this)"><i class="fa-solid fa-link"></i><span>Links</span></div>
-                <div class="nav-item" onclick="filterFiles('text', this)"><i class="fa-solid fa-note-sticky"></i><span>Notes</span></div>
             </nav>
         </div>
 
