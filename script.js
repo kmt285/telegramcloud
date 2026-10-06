@@ -361,6 +361,9 @@ async function deleteSelectedFiles() {
     });
 }
 
+let currentBaseShareLink = ""; // မူရင်းလင့်ခ်ကို သိမ်းထားရန်
+let isRestrictMode = false;
+
 async function shareSelectedFiles() {
     if(selectedFiles.length === 0) return;
     let btn = event.target.closest('button');
@@ -375,7 +378,15 @@ async function shareSelectedFiles() {
         let result = await res.json();
         if(result.success) {
             tg.HapticFeedback.notificationOccurred("success");
-            document.getElementById("share-link-input").value = result.link;
+            
+            // 💡 UI ကို မူလအခြေအနေ (OFF) သို့ ပြန်ထားခြင်း
+            isRestrictMode = false;
+            document.getElementById("restrict-icon").className = "fa-solid fa-lock-open";
+            document.querySelector(".restrict-toggle-wrapper").classList.remove("active");
+            
+            currentBaseShareLink = result.link; // ရလာသော မူရင်းလင့်ခ်
+            document.getElementById("share-link-input").value = currentBaseShareLink;
+            
             document.getElementById("share-alert-overlay").classList.remove("hidden");
             setTimeout(() => document.getElementById("share-alert-overlay").classList.add("show"), 10);
             cancelSelection();
@@ -384,6 +395,26 @@ async function shareSelectedFiles() {
         }
     } catch(e) { showToast("Connection error.", "error"); }
     btn.innerHTML = originalHtml; btn.disabled = false;
+}
+
+// 💡 Restricted Mode (ON / OFF) လုပ်ပေးမည့် ဖန်ရှင်
+function toggleRestrictMode() {
+    isRestrictMode = !isRestrictMode;
+    let icon = document.getElementById("restrict-icon");
+    let wrapper = document.querySelector(".restrict-toggle-wrapper");
+    let input = document.getElementById("share-link-input");
+    
+    if(isRestrictMode) {
+        icon.className = "fa-solid fa-lock";
+        wrapper.classList.add("active");
+        input.value = currentBaseShareLink + "-res"; // လင့်ခ်နောက်တွင် -res တပ်မည်
+        if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    } else {
+        icon.className = "fa-solid fa-lock-open";
+        wrapper.classList.remove("active");
+        input.value = currentBaseShareLink; // မူရင်းလင့်ခ်အတိုင်း ပြန်ထားမည်
+        if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    }
 }
 
 function closeShareAlert() {
