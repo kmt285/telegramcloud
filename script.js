@@ -234,11 +234,18 @@ function toggleFileSelect(id) {
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
-// Select လုပ်ထားသမျှ ဖျက်သိမ်းခြင်း (Cancel Button)
+// 💡 အစားထိုးရန် - Select လုပ်ထားသမျှကို ပယ်ဖျက်ပြီး မူလအခြေအနေသို့ ပြန်သွားရန်
 function cancelSelection() {
     selectedFiles = [];
+    isSelectionMode = false; // 💡 ဒါလေး ထည့်ပေးဖို့လိုပါတယ်
+    
+    let btn = document.getElementById("btn-select-mode");
+    if (btn) btn.style.color = "var(--text-muted)"; // Select icon အရောင်ကို မူလအတိုင်းပြန်ထားရန်
+    
     document.getElementById("selection-bar").classList.add("hidden");
     document.getElementById("upload-bar").classList.remove("hidden");
+    
+    // UI Refresh ပြန်လုပ်မည် (Checkbox လေးတွေ ဖျောက်ရန်)
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
@@ -345,12 +352,37 @@ function closeShareAlert() {
 }
 
 function copyShareLink() {
-    let copyText = document.getElementById("share-link-input");
-    copyText.select();
-    copyText.setSelectionRange(0, 99999); 
-    document.execCommand("copy");
-    showToast("<i class='fa-solid fa-check mr-2'></i> Link Copied to Clipboard!", "success");
-    if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+    let keyText = document.getElementById("share-link-input").value;
+    
+    if (keyText) {
+        const showSuccess = () => {
+            showToast("<i class='fa-solid fa-check mr-2'></i> Link Copied to Clipboard!", "success");
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+            closeShareAlert(); // 💡 Copy ကူးပြီးတာနဲ့ Alert Box ကို အလိုလို ပိတ်ပေးလိုက်ပါ
+        };
+
+        // 💡 Telegram Mini App အတွက် Modern Fallback
+        const fallbackCopy = () => {
+            let textArea = document.createElement("textarea");
+            textArea.value = keyText;
+            textArea.setAttribute('readonly', '');
+            textArea.style.position = "fixed"; 
+            textArea.style.left = "-99999px";
+            textArea.style.top = "-99999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                if (document.execCommand('copy')) showSuccess();
+                else showToast("Failed to copy link.", "error");
+            } catch (err) { showToast("Failed to copy link.", "error"); }
+            document.body.removeChild(textArea);
+        };
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(keyText).then(showSuccess).catch(err => fallbackCopy());
+        } else fallbackCopy();
+    }
 }
 
 function filterFiles(type, element) {
