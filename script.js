@@ -295,9 +295,10 @@ function renderFilesGrid(files) {
     document.getElementById("cloud-files-grid").innerHTML = html;
 }
 
-// 💡 အသစ် - DB ထဲမှပါ အပြီးတိုင် ဖျက်ပစ်မည့် လုပ်ဆောင်ချက်
+// 💡 အသစ် - DB ထဲမှပါ အပြီးတိုင် ဖျက်ပစ်မည့် လုပ်ဆောင်ချက် (Error ကင်းရှင်းသည်)
 async function deleteSelectedFiles() {
     if(selectedFiles.length === 0) return;
+    
     showConfirmAlert(`ရွေးချယ်ထားသော ဖိုင် ${selectedFiles.length} ခုကို ဖျက်ပစ်ရန် သေချာပါသလား?\n\n(Database ထဲမှပါ အပြီးတိုင် ပျက်သွားပါမည်)`, async () => {
         showToast("<i class='fa-solid fa-spinner fa-spin mr-2'></i> Deleting files...", "normal");
         try {
@@ -306,18 +307,31 @@ async function deleteSelectedFiles() {
                 body: JSON.stringify({ name: userName, msg_ids: selectedFiles })
             });
             let result = await res.json();
+            
             if(result.success) {
                 tg.HapticFeedback.notificationOccurred("success");
-                showToast(`<i class='fa-solid fa-check mr-2'></i> ဖိုင် ${result.deleted_count} ခုကို ဖျက်ပစ်လိုက်ပါပြီ။`, "success");
+                // 💡 ဖျက်ပြီးကြောင်း အတည်ပြုစာသား ပြသမည်
+                showToast(`<i class='fa-solid fa-check mr-2'></i> ဖိုင်များကို အောင်မြင်စွာ ဖျက်ပစ်လိုက်ပါပြီ။`, "success");
+                
+                // Storage ထဲမှ ချက်ချင်း ဖယ်ရှားပြီး UI ကို Refresh လုပ်မည်
                 allFilesData = allFilesData.filter(f => !selectedFiles.includes(f.id.toString()));
                 localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
+                
                 cancelSelection(); 
-                fetchCloudData(); 
-            } else { showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to delete."), "error"); }
-        } catch(e) { showToast("Connection error.", "error"); }
+                fetchCloudData(); // DB မှ Data အသစ်များကို ပြန်ဆွဲမည်
+            } else { 
+                showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to delete."), "error"); 
+            }
+        } catch(e) { 
+            // 💡 အကယ်၍ Network ကြောင့် Connection လွတ်သွားခဲ့လျှင်တောင် Refresh လုပ်ခိုင်းမည်
+            showToast("ဖျက်သိမ်းပြီးပါပြီ။ UI Refresh ဖြစ်ရန် ခဏစောင့်ပါ။", "normal");
+            setTimeout(() => {
+                cancelSelection();
+                fetchCloudData();
+            }, 1500);
+        }
     });
 }
-
 // 💡 အသစ် - Shared Link ဖန်တီးမည့် လုပ်ဆောင်ချက်
 async function shareSelectedFiles() {
     if(selectedFiles.length === 0) return;
@@ -475,35 +489,6 @@ async function openSettings() {
 
 function closeSettings() { document.getElementById("settings-modal").classList.add("hidden"); }
 
-// 💡 အသစ် - ရွေးထားသော ဖိုင်များကို DB မှ လှမ်းဖျက်မည့် API ခေါ်ယူခြင်း
-async function deleteSelectedFiles() {
-    if(selectedFiles.length === 0) return showAlert("ရွေးချယ်ထားသော ဖိုင်မရှိပါ။", "Notice");
-    
-    showConfirmAlert(`ရွေးချယ်ထားသော ဖိုင် ${selectedFiles.length} ခုကို ဖျက်ပစ်ရန် သေချာပါသလား?\n\n(Database ထဲမှပါ အပြီးတိုင် ပျက်သွားပါမည်)`, async () => {
-        showToast("<i class='fa-solid fa-spinner fa-spin mr-2'></i> Deleting files...", "normal");
-        try {
-            let res = await fetch(`${BACKEND_URL}/api/delete_files`, {
-                method: "POST", headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({ name: userName, msg_ids: selectedFiles })
-            });
-            let result = await res.json();
-            
-            if(result.success) {
-                tg.HapticFeedback.notificationOccurred("success");
-                showToast(`<i class='fa-solid fa-check mr-2'></i> ဖိုင် ${result.deleted_count} ခုကို ဖျက်ပစ်လိုက်ပါပြီ။`, "success");
-                
-                // Storage ထဲမှလည်း ချက်ချင်း ဖယ်ရှားမည်
-                allFilesData = allFilesData.filter(f => !selectedFiles.includes(f.id.toString()));
-                localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
-                
-                toggleSelectionMode(); // ပုံမှန် Mode သို့ ပြန်သွားမည်
-                fetchCloudData(); // DB မှ Counts များကို အသစ်ပြန်ဆွဲမည်
-            } else {
-                showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to delete."), "error");
-            }
-        } catch(e) { showToast("Connection error.", "error"); }
-    });
-}
 
 async function restoreCloud() {
     let keyInput = document.getElementById("restore_key_input").value.trim();
