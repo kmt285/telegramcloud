@@ -104,8 +104,6 @@
             <main class="main-content">
                 <header class="topbar">
                     <div class="search-bar"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search in Drive..." onkeyup="searchFiles(this.value)"></div>
-                    <!-- 💡 အသစ် - ဖိုင်အများကြီးရွေးရန် Select Mode ခလုတ် -->
-                    <button class="btn-refresh" onclick="toggleSelectionMode()" id="btn-select-mode" title="Select Files"><i class="fa-solid fa-check-double"></i></button>
                     <button class="btn-refresh" onclick="fetchCloudData()"><i class="fa-solid fa-rotate-right"></i></button>
                     <button class="btn-refresh" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
                 </header>
@@ -120,12 +118,13 @@
                     </div>
                 </div>
 
-                <!-- 💡 အသစ် - Delete လုပ်ရန် Action Bar -->
+                <!-- 💡 အသစ် - Delete & Share လုပ်ရန် Action Bar -->
                 <div id="selection-bar" class="selection-bar hidden">
                     <span id="selection-count" class="font-bold">0 Selected</span>
-                    <div style="display:flex; gap:10px;">
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn-action btn-success" onclick="shareSelectedFiles()"><i class="fa-solid fa-share-nodes"></i> Share</button>
                         <button class="btn-action btn-danger" onclick="deleteSelectedFiles()"><i class="fa-solid fa-trash"></i> Delete</button>
-                        <button class="btn-action" onclick="toggleSelectionMode()"><i class="fa-solid fa-xmark"></i> Cancel</button>
+                        <button class="btn-action" onclick="cancelSelection()"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                 </div>
 
@@ -200,6 +199,22 @@
             <div style="display:flex; gap:10px; width:100%;">
                 <button onclick="closeConfirmAlert()" class="btn-primary w-100" style="background:var(--text-muted); box-shadow:none;">Cancel</button>
                 <button id="btn-confirm-action" class="btn-primary w-100 btn-danger" onclick="executeConfirmAction()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 💡 Share Link ဖော်ပြမည့် Overlay -->
+    <div id="share-alert-overlay" class="custom-alert-overlay hidden">
+        <div class="custom-alert-box">
+            <div class="custom-alert-icon" style="color:#0f9d58;">
+                <i class="fa-solid fa-link"></i>
+            </div>
+            <h3 class="title" style="font-size:18px;">Shared Link Ready</h3>
+            <p class="sub-text" style="font-size:13px; margin-bottom:15px;">မည်သူမဆို ဤလင့်ကိုနှိပ်၍ ဖိုင်များကို ရယူနိုင်ပါသည်။</p>
+            <input type="text" id="share-link-input" class="input-box text-center mb-3" readonly style="font-size:12px; padding:12px; background:rgba(15, 157, 88, 0.1); border-color:#0f9d58; color:#0f9d58; font-weight:bold;">
+            <div style="display:flex; gap:10px; width:100%;">
+                <button onclick="closeShareAlert()" class="btn-primary w-100" style="background:var(--text-muted); box-shadow:none;">Close</button>
+                <button class="btn-primary w-100 btn-glow" style="background:#0f9d58;" onclick="copyShareLink()">Copy Link</button>
             </div>
         </div>
     </div>
