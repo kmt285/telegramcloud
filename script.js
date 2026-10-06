@@ -266,8 +266,13 @@ function toggleFileSelect(id) {
     
     if(selectedFiles.length > 0) {
         bar.classList.remove("hidden");
-        upBar.classList.add("hidden");
+        if(upBar) upBar.classList.add("hidden");
         document.getElementById("selection-count").innerText = `${selectedFiles.length} Selected`;
+        
+        // 💡 ဖိုင် (၁) ခုတည်း ရွေးထားမှသာ Rename ခလုတ်ကို ပြမည်
+        let renameBtn = document.getElementById("btn-rename-action");
+        if(renameBtn) renameBtn.style.display = selectedFiles.length === 1 ? "flex" : "none";
+        
     } else {
         cancelSelection(); 
     }
@@ -745,3 +750,62 @@ setInterval(async () => {
         } catch(e) {}
     }
 }, 30000);
+
+// 💡 Rename လုပ်ရန် Modal ဖွင့်ခြင်း
+function openRenameModal() {
+    if (selectedFiles.length !== 1) return;
+    let fileId = selectedFiles[0];
+    let fileObj = allFilesData.find(f => f.id.toString() === fileId);
+    if (fileObj) {
+        document.getElementById("rename-input").value = fileObj.full_text || fileObj.title || "";
+        document.getElementById("rename-alert-overlay").classList.remove("hidden");
+        setTimeout(() => { 
+            document.getElementById("rename-alert-overlay").classList.add("show"); 
+            document.getElementById("rename-input").focus(); 
+        }, 10);
+    }
+}
+
+function closeRenameModal() {
+    let overlay = document.getElementById("rename-alert-overlay");
+    overlay.classList.remove("show");
+    setTimeout(() => overlay.classList.add("hidden"), 300);
+}
+
+// 💡 Rename API သို့ လှမ်းပို့ခြင်း
+async function executeRename() {
+    let newName = document.getElementById("rename-input").value.trim();
+    if (!newName) return showToast("နာမည်အသစ် ရိုက်ထည့်ပါ။", "error");
+    
+    let fileId = selectedFiles[0];
+    let btn = event.target.closest('button');
+    let originalHtml = btn.innerHTML;
+    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true;
+
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/rename_file`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, msg_id: fileId, new_title: newName })
+        });
+        let result = await res.json();
+        
+        if (result.success) {
+            tg.HapticFeedback.notificationOccurred("success");
+            showToast("<i class='fa-solid fa-check mr-2'></i> အမည်ပြောင်းလဲခြင်း အောင်မြင်ပါသည်", "success");
+            
+            // 💡 Local Data ကို ချက်ချင်း Update လုပ်၍ UI ကို Refresh လုပ်မည်
+            let fileIndex = allFilesData.findIndex(f => f.id.toString() === fileId);
+            if (fileIndex !== -1) {
+                allFilesData[fileIndex].title = newName;
+                allFilesData[fileIndex].full_text = newName;
+            }
+            
+            closeRenameModal();
+            cancelSelection(); 
+        } else {
+            showToast("Failed to rename.", "error");
+        }
+    } catch(e) { showToast("Connection error.", "error"); }
+    
+    btn.innerHTML = originalHtml; btn.disabled = false;
+}
