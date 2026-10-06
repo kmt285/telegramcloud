@@ -38,6 +38,9 @@ function setDisplayUsername() {
     brandEl.innerHTML = `<i class="fa-brands fa-telegram text-blue"></i> ${displayName}`;
 }
 
+// 💡 Bot Username ကို မှတ်ထားရန် Global Variable အသစ်
+let botUsername = "";
+
 window.onload = async () => {
     switchStep("step-loading");
     let cached = localStorage.getItem(`cloudData_${userName}`);
@@ -50,6 +53,10 @@ window.onload = async () => {
             method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName })
         });
         let result = await res.json();
+        
+        // 💡 Backend မှ ပို့ပေးသော Bot Username ကို မှတ်ထားမည်
+        if(result.bot_username) botUsername = result.bot_username;
+        
         if(result.exists) { switchStep("step-success"); fetchCloudData(); } 
         else { switchStep("step-phone"); }
     } catch(e) { switchStep("step-phone"); }
@@ -508,10 +515,20 @@ function searchFiles(query) {
     renderFilesGrid(allFilesData.filter(f => f.title.toLowerCase().includes(lowerQ)));
 }
 
-// 💡 Upload Button နှိပ်လျှင် Web App ကို ပိတ်ပြီး Bot Chat ဆီသို့ တိုက်ရိုက် ပြန်ရောက်သွားစေရန်
+// 💡 Upload Button နှိပ်လျှင် Bot Chat ဆီသို့ လင့်ခ်ဖြင့် တိုက်ရိုက်သွားရန်
 function goToBotForUpload() {
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("medium");
-    tg.close(); // Telegram Web App ကို ပိတ်လိုက်မည်
+    
+    let botLink = botUsername ? `https://t.me/${botUsername}` : "https://t.me/"; // Fallback လင့်ခ်
+    
+    // Telegram Web App အထဲမှာ ဖွင့်ထားတာ သေချာလျှင် (Mini App Dropdown)
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        tg.openTelegramLink(botLink);
+    } 
+    // ရိုးရိုး Web Browser (Chrome, Safari စသည်) တွင် ဖွင့်ထားလျှင်
+    else {
+        window.open(botLink, "_blank");
+    }
 }
 
 function showToast(message, type = "normal") {
