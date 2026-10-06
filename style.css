@@ -350,12 +350,18 @@ input[type="number"] {
 }
 
 /* ထောင့်စွန်းတွင်ရှိမည့် Select Checkbox လေး */
+/* မူလကုတ်ကို အောက်ပါအတိုင်း အစားထိုးပါ */
 .select-indicator { 
-    position: absolute; top: 6px; left: 6px; /* ဘယ်ဘက်ထောင့်သို့ ရွှေ့ထားသည် */
-    width: 26px; height: 26px; border-radius: 50%; 
-    background: rgba(0,0,0,0.2); color: transparent; 
+    position: absolute; top: 6px; left: 6px; 
+    width: 28px; height: 28px; /* Touch မိလွယ်အောင် နည်းနည်းကြီးပေးပါ */
+    border-radius: 50%; 
+    background: rgba(0,0,0,0.3); color: transparent; 
     display: flex; align-items: center; justify-content: center; 
-    border: 2px solid rgba(255,255,255,0.8); z-index: 10; transition: all 0.2s; font-size: 13px; cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.9); 
+    z-index: 50; /* 💡 Click Conflict မဖြစ်စေရန် 10 အစား 50 သို့ တိုးပါ */
+    transition: all 0.2s; font-size: 13px; cursor: pointer;
+    /* 💡 အသစ် - Mobile တွင် Click နှိပ်ရလွယ်ကူစေရန် */
+    touch-action: manipulation;
 }
 .file-card .select-indicator:hover { transform: scale(1.15); background: rgba(0,0,0,0.4); }
 .file-card.selected .select-indicator { 
