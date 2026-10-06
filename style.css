@@ -93,14 +93,16 @@ body.selection-active .file-card.selected {
 }
 
 .select-indicator { 
-    position: absolute; top: 8px; left: 8px; 
+    position: absolute; 
+    top: 16px; left: 16px;
     width: 24px; height: 24px; border-radius: 50%; 
-    background: rgba(255, 255, 255, 0.85); color: transparent; 
+    background: rgba(255, 255, 255, 0.9); color: transparent; 
     align-items: center; justify-content: center; 
     border: 2px solid rgba(0, 0, 0, 0.15); 
     z-index: 50; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
     font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-    /* ပုံမှန်အချိန်တွင် ဖွက်ထားမည် */
+    
+    /* ပုံမှန်အချိန်တွင် ဖွက်ထားမည်၊ Selection Mode ဝင်မှသာ ပြမည် */
     display: none; pointer-events: none;
 }
 
