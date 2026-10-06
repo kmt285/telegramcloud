@@ -11,8 +11,11 @@ let tgUser = tg.initDataUnsafe?.user;
 
 let userName = tgUser && tgUser.id ? tgUser.id.toString() : (localStorage.getItem("temp_uid") || "Web_Cloud_User_" + Math.floor(Math.random() * 1000000));
 
-// 💡 အသစ် - ရွေးချယ်ထားသော ဖိုင်များ မှတ်ရန်
+// 💡 အသစ် - ရွေးချယ်ထားသော ဖိုင်များ မှတ်ရန် (Long Press / Right Click UX)
 let isSelectionMode = false;
+let selectedFiles = [];
+let pressTimer;
+let justSelected = false;
 
 function switchStep(stepId) {
     document.querySelectorAll(".step").forEach(el => el.classList.add("hidden"));
@@ -206,47 +209,40 @@ async function fetchCloudData(isLoadMore = false) {
 
 function loadMoreFiles() { fetchCloudData(true); }
 
-// 💡 အသစ် - Long Press နှင့် Right Click UX အတွက် Variable များ
-let selectedFiles = [];
-let isSelectionMode = false;
-let pressTimer;
-let justSelected = false;
-
-// 📱 Long Press (ဖုန်းအတွက်)
+// =========================================================
+// 💡 1. LONG PRESS / RIGHT-CLICK UX (Selection System)
+// =========================================================
 function handleTouchStart(e, id) {
     pressTimer = setTimeout(() => {
         enterSelectionMode(id);
-        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred("heavy"); // ဖိထားကြောင်းသိစေရန် တုန်ခါပေးမည်
-    }, 500); // 0.5 စက္ကန့် ဖိထားလျှင် အလုပ်လုပ်မည်
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred("heavy"); 
+    }, 500); 
 }
 
 function handleTouchEnd() { clearTimeout(pressTimer); }
-function handleTouchMove() { clearTimeout(pressTimer); } // Scroll ဆွဲနေလျှင် Select မဖြစ်စေရန်
+function handleTouchMove() { clearTimeout(pressTimer); } 
 
-// 💻 Right Click (ကွန်ပျူတာအတွက်)
 function handleRightClick(e, id) {
-    e.preventDefault(); // Browser ၏ Right-click menu ထွက်လာခြင်းကို တားမည်
+    e.preventDefault(); 
     enterSelectionMode(id);
 }
 
-// 🎯 Selection Mode စတင်ခြင်း
 function enterSelectionMode(id) {
     if (!isSelectionMode) {
         isSelectionMode = true;
         justSelected = true;
-        document.body.classList.add("selection-active"); // CSS Class ထည့်မည်
+        document.body.classList.add("selection-active"); 
         toggleFileSelect(id);
-        setTimeout(() => justSelected = false, 300); // Long press ပြီးသွားလျှင် ချက်ချင်းပြန်ပိတ်မသွားစေရန်
+        setTimeout(() => justSelected = false, 300); 
     }
 }
 
-// 🖱️ ဖိုင်ကို ရိုးရိုးနှိပ်ခြင်း (Click)
 function handleFileClick(id) {
     if (justSelected) return; 
     if (isSelectionMode) {
-        toggleFileSelect(id); // Select Mode တွင်ဆိုပါက အမှန်ခြစ် တပ်/ဖြုတ် လုပ်မည်
+        toggleFileSelect(id); 
     } else {
-        openFile(id); // ပုံမှန်အချိန်ဆိုလျှင် ဖိုင်ကို ဖွင့်ပြ/ပို့ပေးမည်
+        openFile(id); 
     }
 }
 
@@ -266,24 +262,27 @@ function toggleFileSelect(id) {
         upBar.classList.add("hidden");
         document.getElementById("selection-count").innerText = `${selectedFiles.length} Selected`;
     } else {
-        cancelSelection(); // ဖိုင်အားလုံးကို Deselect လုပ်လိုက်ပါက Mode ထဲမှ အလိုလို ထွက်မည်
+        cancelSelection(); 
     }
     
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
-// ❌ Selection အားလုံးကို ပယ်ဖျက်ခြင်း (Cancel နှိပ်လျှင်)
+// 💡 FIX: Cancel လုပ်သည့်အခါ မူလအခြေအနေသို့ ပြန်လည်ရောက်ရှိစေရန် အပြည့်အစုံ ရေးသားထားသည်
 function cancelSelection() {
     selectedFiles = [];
     isSelectionMode = false;
-    document.body.classList.remove("selection-active"); // UI ကို မူလအတိုင်း ပြန်ထားမည်
+    document.body.classList.remove("selection-active"); 
     
     document.getElementById("selection-bar").classList.add("hidden");
     document.getElementById("upload-bar").classList.remove("hidden");
+    
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
-// 🖼️ UI တွင် ဖိုင်များကို ပြသခြင်း (Event Listeners များ အသစ်ထည့်ထားသည်)
+// =========================================================
+// 💡 2. RENDER GRID (UI)
+// =========================================================
 function renderFilesGrid(files) {
     let html = "";
     if(files.length === 0) {
@@ -314,7 +313,6 @@ function renderFilesGrid(files) {
                 let isSelected = selectedFiles.includes(f.id.toString());
                 let selectedClass = isSelected ? "selected" : "";
                 
-                // 💡 ပြင်ဆင်ချက် - Mobile (Long Press) နှင့် Desktop (Right Click) Event များ ထည့်သွင်းထားသည်
                 html += `
                 <div class="file-card ${selectedClass}" 
                      onclick="handleFileClick('${f.id}')"
@@ -333,10 +331,11 @@ function renderFilesGrid(files) {
     document.getElementById("cloud-files-grid").innerHTML = html;
 }
 
-// 💡 အသစ် - DB ထဲမှပါ အပြီးတိုင် ဖျက်ပစ်မည့် လုပ်ဆောင်ချက် (Error ကင်းရှင်းသည်)
+// =========================================================
+// 💡 3. DELETE & SHARE FUNCTIONS
+// =========================================================
 async function deleteSelectedFiles() {
     if(selectedFiles.length === 0) return;
-    
     showConfirmAlert(`ရွေးချယ်ထားသော ဖိုင် ${selectedFiles.length} ခုကို ဖျက်ပစ်ရန် သေချာပါသလား?\n\n(Database ထဲမှပါ အပြီးတိုင် ပျက်သွားပါမည်)`, async () => {
         showToast("<i class='fa-solid fa-spinner fa-spin mr-2'></i> Deleting files...", "normal");
         try {
@@ -345,32 +344,23 @@ async function deleteSelectedFiles() {
                 body: JSON.stringify({ name: userName, msg_ids: selectedFiles })
             });
             let result = await res.json();
-            
             if(result.success) {
                 tg.HapticFeedback.notificationOccurred("success");
-                // 💡 ဖျက်ပြီးကြောင်း အတည်ပြုစာသား ပြသမည်
                 showToast(`<i class='fa-solid fa-check mr-2'></i> ဖိုင်များကို အောင်မြင်စွာ ဖျက်ပစ်လိုက်ပါပြီ။`, "success");
                 
-                // Storage ထဲမှ ချက်ချင်း ဖယ်ရှားပြီး UI ကို Refresh လုပ်မည်
                 allFilesData = allFilesData.filter(f => !selectedFiles.includes(f.id.toString()));
                 localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
                 
                 cancelSelection(); 
-                fetchCloudData(); // DB မှ Data အသစ်များကို ပြန်ဆွဲမည်
-            } else { 
-                showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to delete."), "error"); 
-            }
+                fetchCloudData(); 
+            } else { showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to delete."), "error"); }
         } catch(e) { 
-            // 💡 အကယ်၍ Network ကြောင့် Connection လွတ်သွားခဲ့လျှင်တောင် Refresh လုပ်ခိုင်းမည်
             showToast("ဖျက်သိမ်းပြီးပါပြီ။ UI Refresh ဖြစ်ရန် ခဏစောင့်ပါ။", "normal");
-            setTimeout(() => {
-                cancelSelection();
-                fetchCloudData();
-            }, 1500);
+            setTimeout(() => { cancelSelection(); fetchCloudData(); }, 1500);
         }
     });
 }
-// 💡 အသစ် - Shared Link ဖန်တီးမည့် လုပ်ဆောင်ချက်
+
 async function shareSelectedFiles() {
     if(selectedFiles.length === 0) return;
     let btn = event.target.closest('button');
@@ -396,24 +386,24 @@ async function shareSelectedFiles() {
     btn.innerHTML = originalHtml; btn.disabled = false;
 }
 
-// 💡 Share Link Overlay ပိတ်ရန်နှင့် Copy ယူရန်
 function closeShareAlert() {
     let overlay = document.getElementById("share-alert-overlay");
     overlay.classList.remove("show");
     setTimeout(() => overlay.classList.add("hidden"), 300);
 }
 
+// 💡 FIX: Copy Link အလုပ်လုပ်စေရန် (Mobile/iOS Support အပါအဝင်)
 function copyShareLink() {
-    let keyText = document.getElementById("share-link-input").value;
+    let keyInput = document.getElementById("share-link-input");
+    let keyText = keyInput.value;
     
     if (keyText) {
         const showSuccess = () => {
             showToast("<i class='fa-solid fa-check mr-2'></i> Link Copied to Clipboard!", "success");
             if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-            closeShareAlert(); // 💡 Copy ကူးပြီးတာနဲ့ Alert Box ကို အလိုလို ပိတ်ပေးလိုက်ပါ
+            closeShareAlert(); 
         };
 
-        // 💡 Telegram Mini App အတွက် Modern Fallback
         const fallbackCopy = () => {
             let textArea = document.createElement("textarea");
             textArea.value = keyText;
@@ -433,10 +423,15 @@ function copyShareLink() {
 
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(keyText).then(showSuccess).catch(err => fallbackCopy());
-        } else fallbackCopy();
+        } else {
+            fallbackCopy();
+        }
     }
 }
 
+// =========================================================
+// 💡 4. OTHER FUNCTIONS
+// =========================================================
 function filterFiles(type, element) {
     currentCategory = type;
     document.querySelectorAll('.nav-links li, .nav-item').forEach(el => el.classList.remove('active'));
@@ -527,7 +522,6 @@ async function openSettings() {
 
 function closeSettings() { document.getElementById("settings-modal").classList.add("hidden"); }
 
-
 async function restoreCloud() {
     let keyInput = document.getElementById("restore_key_input").value.trim();
     if(!keyInput) return showAlert("Please enter a Recovery Key.", "Notice");
@@ -571,7 +565,6 @@ function closeCustomAlert() {
     }, 300);
 }
 
-// 💡 အသစ် - User အား သေချာ/မသေချာ (Yes/No) မေးမည့် Confirm Dialog
 function showConfirmAlert(message, callback) {
     confirmAlertCallback = callback;
     document.getElementById("confirm-alert-message").innerText = message;
