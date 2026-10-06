@@ -334,33 +334,37 @@ input[type="number"] {
     to { opacity: 1; }
 }
 
-/* 💡 Selection & Action UI များကို အလှပဆုံး ပြင်ဆင်ထားခြင်း */
-.file-card { position: relative; transition: transform 0.2s, border 0.2s, background 0.2s; border: 2px solid transparent; }
+/* 💡 Selection & Action UI (Long Press / Right Click ဖြင့်သာ ပေါ်လာမည့်စနစ်) */
+.file-card { 
+    position: relative; transition: transform 0.2s, border 0.2s, background 0.2s; border: 2px solid transparent; 
+    /* 💡 အသစ် - Long press လုပ်သောအခါ Browser ၏ Default Menu များ မပေါ်စေရန် တားဆီးခြင်း */
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
 .file-card:hover { transform: translateY(-2px); }
-.file-card.selected { 
+
+/* Select လုပ်ထားသော ဖိုင်များ အနည်းငယ် သေးသွားပြီး သိသာစေရန် */
+body.selection-active .file-card.selected { 
     border-color: var(--primary-blue); 
     background: rgba(26, 115, 232, 0.05); 
+    transform: scale(0.94);
 }
 
-/* 💡 အသစ် - Google Drive ပုံစံ ဖြူဖြူသန့်သန့် Checkbox ပြင်ဆင်ချက် */
 .select-indicator { 
     position: absolute; top: 8px; left: 8px; 
     width: 24px; height: 24px; border-radius: 50%; 
     background: rgba(255, 255, 255, 0.85); color: transparent; 
-    display: flex; align-items: center; justify-content: center; 
+    align-items: center; justify-content: center; 
     border: 2px solid rgba(0, 0, 0, 0.15); 
     z-index: 50; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
-    font-size: 12px; cursor: pointer; touch-action: manipulation;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    
+    /* 💡 အသစ် - ပုံမှန်အချိန်တွင် ဖွက်ထားမည်၊ Selection Mode ဝင်မှသာ ပြမည် */
+    display: none; pointer-events: none;
 }
 
-.file-card .select-indicator:hover { 
-    transform: scale(1.1); 
-    background: #ffffff;
-    border-color: rgba(0, 0, 0, 0.3);
-}
+body.selection-active .select-indicator { display: flex; }
 
-.file-card.selected .select-indicator { 
+body.selection-active .file-card.selected .select-indicator { 
     background: var(--primary-blue); color: white; border-color: var(--primary-blue); 
     box-shadow: 0 3px 8px rgba(26, 115, 232, 0.4);
 }
