@@ -268,6 +268,8 @@ function toggleFileSelect(id) {
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
+let previouslySelectedFiles = [];
+
 // 💡 FIX: Cancel လုပ်သည့်အခါ မူလအခြေအနေသို့ ပြန်လည်ရောက်ရှိစေရန် အပြည့်အစုံ ရေးသားထားသည်
 function cancelSelection() {
     selectedFiles = [];
@@ -361,7 +363,7 @@ async function deleteSelectedFiles() {
     });
 }
 
-let currentBaseShareLink = ""; // မူရင်းလင့်ခ်ကို သိမ်းထားရန်
+let currentBaseShareLink = ""; 
 let isRestrictMode = false;
 
 async function shareSelectedFiles() {
@@ -373,18 +375,15 @@ async function shareSelectedFiles() {
     try {
         let res = await fetch(`${BACKEND_URL}/api/share_files`, {
             method: "POST", headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ name: userName, msg_ids: selectedFiles })
+            // 💡 Server သို့ is_restricted တန်ဖိုးကို JSON ဖြင့် တိုက်ရိုက်ပို့မည်
+            body: JSON.stringify({ name: userName, msg_ids: selectedFiles, is_restricted: isRestrictMode }) 
         });
         let result = await res.json();
         if(result.success) {
             tg.HapticFeedback.notificationOccurred("success");
             
-            // 💡 UI ကို မူလအခြေအနေ (OFF) သို့ ပြန်ထားခြင်း
-            isRestrictMode = false;
-            document.getElementById("restrict-icon").className = "fa-solid fa-lock-open";
-            document.querySelector(".restrict-toggle-wrapper").classList.remove("active");
-            
-            currentBaseShareLink = result.link; // ရလာသော မူရင်းလင့်ခ်
+            // 💡 လင့်ခ်အနောက်တွင် ဘာမှတပ်စရာမလိုတော့ပါ၊ DB တွင်သာ မှတ်သွားပါမည်။
+            currentBaseShareLink = result.link; 
             document.getElementById("share-link-input").value = currentBaseShareLink;
             
             document.getElementById("share-alert-overlay").classList.remove("hidden");
@@ -397,23 +396,44 @@ async function shareSelectedFiles() {
     btn.innerHTML = originalHtml; btn.disabled = false;
 }
 
-// 💡 Restricted Mode (ON / OFF) လုပ်ပေးမည့် ဖန်ရှင်
+// 💡 Restricted Button ကို နှိပ်သည့်အခါ UI ပြောင်းလဲမှုသာ လုပ်ဆောင်မည် (URL ကို မထိတော့ပါ)
 function toggleRestrictMode() {
     isRestrictMode = !isRestrictMode;
     let icon = document.getElementById("restrict-icon");
     let wrapper = document.querySelector(".restrict-toggle-wrapper");
-    let input = document.getElementById("share-link-input");
     
     if(isRestrictMode) {
         icon.className = "fa-solid fa-lock";
         wrapper.classList.add("active");
-        input.value = currentBaseShareLink + "-res"; // လင့်ခ်နောက်တွင် -res တပ်မည်
         if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     } else {
         icon.className = "fa-solid fa-lock-open";
         wrapper.classList.remove("active");
-        input.value = currentBaseShareLink; // မူရင်းလင့်ခ်အတိုင်း ပြန်ထားမည်
         if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    }
+    
+    // 💡 အရေးကြီးသည်- Toggle ပြောင်းတိုင်း Server ဆီမှ လင့်ခ်အသစ်ပြန်တောင်းရန် လိုအပ်သောကြောင့် 
+    // input box ထဲမှလင့်ခ်ကို ဖျောက်ထားပြီး (သို့) Loading ပြ၍ shareSelectedFiles ကို ထပ်မံခေါ်ပေးရန်လိုသည်။
+    // အလွယ်ကူဆုံးနည်းမှာ Toggle နှိပ်လျှင် နောက်ကွယ်မှ API ကို တိတ်တဆိတ် ထပ်ခေါ်ပေးခြင်းဖြစ်သည်။
+    updateShareLinkQuietly();
+}
+
+// Toggle ပြောင်းသည့်အခါ လင့်ခ်အသစ် (Restricted/Unrestricted) ပြန်ထုတ်ရန်
+async function updateShareLinkQuietly() {
+    let input = document.getElementById("share-link-input");
+    input.value = "Updating link...";
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/share_files`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, msg_ids: selectedFiles.length > 0 ? selectedFiles : previouslySelectedFiles, is_restricted: isRestrictMode }) 
+        });
+        let result = await res.json();
+        if(result.success) {
+            currentBaseShareLink = result.link;
+            input.value = currentBaseShareLink;
+        }
+    } catch(e) {
+        input.value = "Error updating link";
     }
 }
 
