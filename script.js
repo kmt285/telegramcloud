@@ -486,7 +486,7 @@ function filterFiles(type, element) {
     document.querySelectorAll('.nav-links li, .nav-item').forEach(el => el.classList.remove('active'));
     if(element) element.classList.add('active');
     
-    let titles = { 'all': 'My Drive', 'photo': 'Photos', 'video': 'Videos', 'doc': 'Documents', 'link': 'Links', 'text': 'Notes' };
+    let titles = { 'all': 'My Drive', 'photo': 'Photos', 'video': 'Videos', 'doc': 'Documents', 'link': 'Links' };
     document.getElementById('current-category').innerText = titles[type];
     
     updateCategoryStatus();
@@ -508,19 +508,10 @@ function searchFiles(query) {
     renderFilesGrid(allFilesData.filter(f => f.title.toLowerCase().includes(lowerQ)));
 }
 
-async function saveCloudNote() {
-    let noteInput = document.getElementById("note_input");
-    let text = noteInput.value.trim();
-    if(!text) return;
-    let btn = event.target.closest('button');
-    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true;
-    try {
-        await fetch(`${BACKEND_URL}/api/upload_note`, {
-            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName, text: text })
-        });
-        noteInput.value = ""; tg.HapticFeedback.notificationOccurred("success"); fetchCloudData(); 
-    } catch(e) { showToast("Failed to save note.", "error"); }
-    btn.innerHTML = "<i class='fa-solid fa-paper-plane'></i>"; btn.disabled = false;
+// 💡 Upload Button နှိပ်လျှင် Web App ကို ပိတ်ပြီး Bot Chat ဆီသို့ တိုက်ရိုက် ပြန်ရောက်သွားစေရန်
+function goToBotForUpload() {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("medium");
+    tg.close(); // Telegram Web App ကို ပိတ်လိုက်မည်
 }
 
 function showToast(message, type = "normal") {
