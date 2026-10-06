@@ -4,7 +4,7 @@ tg.ready();
 
 let currentCategory = 'all'; 
 let cloudTotalCounts = {};
-const BACKEND_URL = "https://telegramcloudbackend.onrender.com";
+const BACKEND_URL = "https://telegramcloudapp.pages.dev";
 
 let phoneHash = "", userPhone = "", pollingInterval, allFilesData = [];
 let tgUser = tg.initDataUnsafe?.user;
