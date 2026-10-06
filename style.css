@@ -80,25 +80,24 @@ input[type="number"] { -moz-appearance: textfield; }
 .file-card { 
     background: var(--card-bg); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; cursor: pointer;
     position: relative; transition: transform 0.2s, border 0.2s, background 0.2s; border: 2px solid transparent; 
-    /* Long press အလုပ်လုပ်စေရန် ဖုန်း Menu များ တားဆီးခြင်း */
     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
 .file-card:hover { transform: translateY(-2px); }
 
-/* Select လုပ်ထားသော ဖိုင်များ အနည်းငယ် သေးသွားပြီး သိသာစေရန် */
 body.selection-active .file-card.selected { 
     border-color: var(--primary-blue); 
     background: rgba(26, 115, 232, 0.05); 
     transform: scale(0.94);
 }
 
+/* 💡 Z-Index 2 သို့လျှော့ချထားသဖြင့် Scroll ဆွဲလျှင် Overlap မဖြစ်တော့ပါ */
 .select-indicator { 
-    position: absolute; top: 8px; left: 8px; 
+    position: absolute; top: 12px; left: 12px; 
     width: 24px; height: 24px; border-radius: 50%; 
     background: rgba(255, 255, 255, 0.85); color: transparent; 
     align-items: center; justify-content: center; 
     border: 2px solid rgba(0, 0, 0, 0.15); 
-    z-index: 2; /* 💡 50 မှ 2 သို့ လျှော့ချလိုက်ပါ */
+    z-index: 2; /* 💡 ပြင်ဆင်ချက် */
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
     font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     display: none; pointer-events: none;
@@ -111,12 +110,13 @@ body.selection-active .file-card.selected .select-indicator {
     box-shadow: 0 3px 8px rgba(26, 115, 232, 0.4);
 }
 
+/* 💡 Selection Bar & Actions (Z-index မြှင့်ထားသည်) */
 .selection-bar { 
     position: absolute; bottom: 0; left: 0; right: 0; 
     background: var(--card-bg); padding: 12px 20px; 
     display: flex; justify-content: space-between; align-items: center; 
     border-top: 1px solid var(--border-color); 
-    z-index: 100; /* 💡 20 မှ 100 သို့ အမြင့်ဆုံးထားလိုက်ပါ */
+    z-index: 100; /* 💡 ပြင်ဆင်ချက် */
     box-shadow: 0 -4px 15px rgba(0,0,0,0.05); 
 }
 .font-bold { font-weight: 600; font-size: 14px; color: var(--primary-blue); }
@@ -125,13 +125,11 @@ body.selection-active .file-card.selected .select-indicator {
 .btn-success { background: #0f9d58 !important; box-shadow: 0 4px 10px rgba(15, 157, 88, 0.2); }
 .btn-action:active { transform: scale(0.95); }
 
-/* 💡 Navigation & Inputs */
+/* 💡 Navigation & Inputs (Z-index မြှင့်ထားသည်) */
 .upload-bar { 
-    position: absolute; bottom: 0; left: 0; right: 0; 
-    padding: 15px; background: var(--bg-color); 
-    border-top: 1px solid var(--border-color); 
-    display: flex; gap: 10px; 
-    z-index: 99; /* 💡 5 မှ 99 သို့ တိုးပေးပါ */
+    position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; 
+    background: var(--bg-color); border-top: 1px solid var(--border-color); 
+    display: flex; gap: 10px; z-index: 99; /* 💡 ပြင်ဆင်ချက် */
 }
 .input-box-alt { flex: 1; background: var(--card-bg); border: none; border-radius: 20px; padding: 12px 20px; color: var(--text-main); outline: none; }
 .btn-upload { background: var(--primary-blue); border: none; color: white; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 16px; }
@@ -139,8 +137,7 @@ body.selection-active .file-card.selected .select-indicator {
 .bottom-nav { 
     display: none; position: absolute; bottom: 0; left: 0; right: 0; 
     background: var(--bg-color); border-top: 1px solid var(--border-color); 
-    justify-content: space-around; padding: 10px 0; 
-    z-index: 98; /* 💡 10 မှ 98 သို့ တိုးပေးပါ */
+    justify-content: space-around; padding: 10px 0; z-index: 98; /* 💡 ပြင်ဆင်ချက် */
 }
 .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 11px; cursor: pointer; gap: 4px; }
 .nav-item.active { color: var(--primary-blue); }
