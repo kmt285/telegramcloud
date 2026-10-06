@@ -13,7 +13,6 @@ let userName = tgUser && tgUser.id ? tgUser.id.toString() : (localStorage.getIte
 
 // 💡 အသစ် - ရွေးချယ်ထားသော ဖိုင်များ မှတ်ရန်
 let isSelectionMode = false;
-let selectedFiles = [];
 
 function switchStep(stepId) {
     document.querySelectorAll(".step").forEach(el => el.classList.add("hidden"));
@@ -207,30 +206,10 @@ async function fetchCloudData(isLoadMore = false) {
 
 function loadMoreFiles() { fetchCloudData(true); }
 
-// 💡 Multi Select အတွက် Toggle Function အသစ်
-function toggleSelectionMode() {
-    isSelectionMode = !isSelectionMode;
-    selectedFiles = [];
-    
-    let btn = document.getElementById("btn-select-mode");
-    let bar = document.getElementById("selection-bar");
-    let upBar = document.getElementById("upload-bar");
-    
-    if(isSelectionMode) {
-        btn.style.color = "var(--primary-blue)";
-        bar.classList.remove("hidden");
-        upBar.classList.add("hidden"); // Select လုပ်နေစဉ် Note မရိုက်နိုင်ရန် ဖွက်ထားမည်
-    } else {
-        btn.style.color = "var(--text-muted)";
-        bar.classList.add("hidden");
-        upBar.classList.remove("hidden");
-    }
-    
-    // UI Refresh ပြန်လုပ်မည်
-    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
-}
+// 💡 အသစ် - ရွေးချယ်ထားသော ဖိုင်များကို မှတ်ရန်
+let selectedFiles = [];
 
-// 💡 ဖိုင်ရွေးချယ်မှုကို မှတ်သားမည့် Function
+// ဖိုင်ပေါ်က အမှန်ခြစ်လေးကို နှိပ်လျှင် အလုပ်လုပ်မည့်စနစ် (Toggle Select)
 function toggleFileSelect(id) {
     id = id.toString();
     if(selectedFiles.includes(id)) {
@@ -238,10 +217,32 @@ function toggleFileSelect(id) {
     } else {
         selectedFiles.push(id);
     }
-    document.getElementById("selection-count").innerText = `${selectedFiles.length} Selected`;
+    
+    let bar = document.getElementById("selection-bar");
+    let upBar = document.getElementById("upload-bar");
+    
+    if(selectedFiles.length > 0) {
+        bar.classList.remove("hidden");
+        upBar.classList.add("hidden");
+        document.getElementById("selection-count").innerText = `${selectedFiles.length} Selected`;
+    } else {
+        bar.classList.add("hidden");
+        upBar.classList.remove("hidden");
+    }
+    
+    // UI တွင် အမှန်ခြစ်လေး ချက်ချင်းပေါ်သွားစေရန်
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
+// Select လုပ်ထားသမျှ ဖျက်သိမ်းခြင်း (Cancel Button)
+function cancelSelection() {
+    selectedFiles = [];
+    document.getElementById("selection-bar").classList.add("hidden");
+    document.getElementById("upload-bar").classList.remove("hidden");
+    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+}
+
+// UI တွင် ဖိုင်များကို ပြသခြင်း (အမှန်ခြစ် Checkbox လေး ပါဝင်လာပါမည်)
 function renderFilesGrid(files) {
     let html = "";
     if(files.length === 0) {
@@ -255,12 +256,9 @@ function renderFilesGrid(files) {
                 else if (f.type === "link") iconClass = "fa-link link";
                 else if (f.type === "text") iconClass = "fa-note-sticky text";
                 
-                let thumbHtml = "";
-                if (f.thumb_file_id) {
-                    thumbHtml = `<img src="${BACKEND_URL}/api/thumb/${f.thumb_file_id}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`;
-                } else {
-                    thumbHtml = `<i class="fa-solid ${iconClass} fc-icon"></i>`;
-                }
+                let thumbHtml = f.thumb_file_id 
+                    ? `<img src="${BACKEND_URL}/api/thumb/${f.thumb_file_id}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`
+                    : `<i class="fa-solid ${iconClass} fc-icon"></i>`;
 
                 let safeTitle = f.title ? f.title.replace(/'/g, "\\'").replace(/"/g, "&quot;") : "Unknown File";
                 let displayTitle = f.title ? f.title : "Unknown File";
@@ -269,19 +267,16 @@ function renderFilesGrid(files) {
                 if (f.timestamp) {
                     let d = new Date(f.timestamp * 1000);
                     let months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-                    let hours = d.getHours();
-                    let minutes = d.getMinutes().toString().padStart(2, '0');
-                    dateStr = `${d.getDate()} ${months[d.getMonth()]}, ${hours}:${minutes}`;
+                    dateStr = `${d.getDate()} ${months[d.getMonth()]}, ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
                 }
 
-                // 💡 ပြင်ဆင်ချက် - Select Mode ပေါ်မူတည်ပြီး Click Action ကို ပြောင်းလဲခြင်း
+                // 💡 ဖိုင်ပေါ်က Checkbox အဝိုင်းလေးကို နှိပ်လျှင် Select မှတ်မည်၊ ဖိုင်ကိုနှိပ်လျှင် ဖွင့်မည်
                 let isSelected = selectedFiles.includes(f.id.toString());
                 let selectedClass = isSelected ? "selected" : "";
-                let selectHtml = isSelectionMode ? `<div class="select-indicator"><i class="fa-solid fa-check"></i></div>` : "";
-                let clickAction = isSelectionMode ? `toggleFileSelect('${f.id}')` : `openFile('${f.id}')`;
+                let selectHtml = `<div class="select-indicator" onclick="event.stopPropagation(); toggleFileSelect('${f.id}')"><i class="fa-solid fa-check"></i></div>`;
 
                 html += `
-                <div class="file-card ${selectedClass}" onclick="${clickAction}">
+                <div class="file-card ${selectedClass}" onclick="openFile('${f.id}')">
                     ${selectHtml}
                     ${thumbHtml}
                     <div class="fc-title">${displayTitle}</div>
@@ -291,6 +286,71 @@ function renderFilesGrid(files) {
         });
     }
     document.getElementById("cloud-files-grid").innerHTML = html;
+}
+
+// 💡 အသစ် - DB ထဲမှပါ အပြီးတိုင် ဖျက်ပစ်မည့် လုပ်ဆောင်ချက်
+async function deleteSelectedFiles() {
+    if(selectedFiles.length === 0) return;
+    showConfirmAlert(`ရွေးချယ်ထားသော ဖိုင် ${selectedFiles.length} ခုကို ဖျက်ပစ်ရန် သေချာပါသလား?\n\n(Database ထဲမှပါ အပြီးတိုင် ပျက်သွားပါမည်)`, async () => {
+        showToast("<i class='fa-solid fa-spinner fa-spin mr-2'></i> Deleting files...", "normal");
+        try {
+            let res = await fetch(`${BACKEND_URL}/api/delete_files`, {
+                method: "POST", headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ name: userName, msg_ids: selectedFiles })
+            });
+            let result = await res.json();
+            if(result.success) {
+                tg.HapticFeedback.notificationOccurred("success");
+                showToast(`<i class='fa-solid fa-check mr-2'></i> ဖိုင် ${result.deleted_count} ခုကို ဖျက်ပစ်လိုက်ပါပြီ။`, "success");
+                allFilesData = allFilesData.filter(f => !selectedFiles.includes(f.id.toString()));
+                localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
+                cancelSelection(); 
+                fetchCloudData(); 
+            } else { showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to delete."), "error"); }
+        } catch(e) { showToast("Connection error.", "error"); }
+    });
+}
+
+// 💡 အသစ် - Shared Link ဖန်တီးမည့် လုပ်ဆောင်ချက်
+async function shareSelectedFiles() {
+    if(selectedFiles.length === 0) return;
+    let btn = event.target.closest('button');
+    let originalHtml = btn.innerHTML;
+    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true;
+    
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/share_files`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, msg_ids: selectedFiles })
+        });
+        let result = await res.json();
+        if(result.success) {
+            tg.HapticFeedback.notificationOccurred("success");
+            document.getElementById("share-link-input").value = result.link;
+            document.getElementById("share-alert-overlay").classList.remove("hidden");
+            setTimeout(() => document.getElementById("share-alert-overlay").classList.add("show"), 10);
+            cancelSelection();
+        } else {
+            showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to share."), "error");
+        }
+    } catch(e) { showToast("Connection error.", "error"); }
+    btn.innerHTML = originalHtml; btn.disabled = false;
+}
+
+// 💡 Share Link Overlay ပိတ်ရန်နှင့် Copy ယူရန်
+function closeShareAlert() {
+    let overlay = document.getElementById("share-alert-overlay");
+    overlay.classList.remove("show");
+    setTimeout(() => overlay.classList.add("hidden"), 300);
+}
+
+function copyShareLink() {
+    let copyText = document.getElementById("share-link-input");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); 
+    document.execCommand("copy");
+    showToast("<i class='fa-solid fa-check mr-2'></i> Link Copied to Clipboard!", "success");
+    if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
 }
 
 function filterFiles(type, element) {
