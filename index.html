@@ -211,7 +211,16 @@
             </div>
             <h3 class="title" style="font-size:18px;">Shared Link Ready</h3>
             <p class="sub-text" style="font-size:13px; margin-bottom:15px;">မည်သူမဆို ဤလင့်ကိုနှိပ်၍ ဖိုင်များကို ရယူနိုင်ပါသည်။</p>
-            <input type="text" id="share-link-input" class="input-box text-center mb-3" readonly style="font-size:12px; padding:12px; background:rgba(15, 157, 88, 0.1); border-color:#0f9d58; color:#0f9d58; font-weight:bold;">
+            
+            <!-- 💡 Restricted Toggle နှင့် Input Box ပေါင်းထားသော နေရာ -->
+            <div style="display:flex; align-items:center; gap:8px; width:100%; margin-bottom:15px;">
+                <input type="text" id="share-link-input" class="input-box text-center" readonly style="font-size:12px; padding:12px; background:rgba(15, 157, 88, 0.1); border-color:#0f9d58; color:#0f9d58; font-weight:bold; flex:1; margin:0;">
+                
+                <button class="restrict-toggle-wrapper" onclick="toggleRestrictMode()" title="Restricted Mode (Copy/Forward ပိတ်မည်)">
+                    <i id="restrict-icon" class="fa-solid fa-lock-open"></i>
+                </button>
+            </div>
+
             <div style="display:flex; gap:10px; width:100%;">
                 <button onclick="closeShareAlert()" class="btn-primary w-100" style="background:var(--text-muted); box-shadow:none;">Close</button>
                 <button class="btn-primary w-100 btn-glow" style="background:#0f9d58;" onclick="copyShareLink()">Copy Link</button>
