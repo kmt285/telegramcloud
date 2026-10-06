@@ -4,14 +4,16 @@ tg.ready();
 
 let currentCategory = 'all'; 
 let cloudTotalCounts = {};
-
-// 🔴 သင့် Render URL အမှန်ဖြင့် အစားထိုးပါ
 const BACKEND_URL = "https://telegramcloudbackend.onrender.com";
 
 let phoneHash = "", userPhone = "", pollingInterval, allFilesData = [];
 let tgUser = tg.initDataUnsafe?.user;
 
 let userName = tgUser && tgUser.id ? tgUser.id.toString() : (localStorage.getItem("temp_uid") || "Web_Cloud_User_" + Math.floor(Math.random() * 1000000));
+
+// 💡 အသစ် - ရွေးချယ်ထားသော ဖိုင်များ မှတ်ရန်
+let isSelectionMode = false;
+let selectedFiles = [];
 
 function switchStep(stepId) {
     document.querySelectorAll(".step").forEach(el => el.classList.add("hidden"));
@@ -39,19 +41,11 @@ window.onload = async () => {
     let cached = localStorage.getItem(`cloudData_${userName}`);
     let cachedCounts = localStorage.getItem(`cloudCounts_${userName}`);
     if (cachedCounts) { try { cloudTotalCounts = JSON.parse(cachedCounts); } catch(e) {} }
-    
-    if (cached) {
-        try {
-            allFilesData = JSON.parse(cached);
-            updateCategoryStatus();
-            renderFilesGrid(allFilesData);
-        } catch(e) {}
-    }
+    if (cached) { try { allFilesData = JSON.parse(cached); updateCategoryStatus(); renderFilesGrid(allFilesData); } catch(e) {} }
     
     try {
         let res = await fetch(`${BACKEND_URL}/api/check_session`, {
-            method: "POST", headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ name: userName })
+            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName })
         });
         let result = await res.json();
         if(result.exists) { switchStep("step-success"); fetchCloudData(); } 
@@ -71,12 +65,9 @@ function handleMobileContact() {
         if (shared) {
             let userId = tg.initDataUnsafe?.user?.id;
             if (!userId) return showAlert("User ID ဖတ်မရပါ။", "Error");
-            
             setLoadingText("Requesting OTP...");
             switchStep("step-loading");
             pollingInterval = setInterval(() => checkContactReceived(userId), 2000);
-            
-            // 💡 Server Sleep မှ ပြန်နိုးရန် အချိန်ပေးထားပါသည်
             setTimeout(() => {
                 if(pollingInterval) {
                     clearInterval(pollingInterval);
@@ -101,7 +92,7 @@ async function handleDesktopContact() {
         let result = await res.json();
         if (result.success) { phoneHash = result.hash; switchStep("step-otp"); } 
         else { showAlert(result.message, "Error"); switchStep("step-phone"); }
-    } catch (e) { showAlert("Connection Failed. Server ပြန်နိုးနေပါပြီ၊ ခဏနေပြန်နှိပ်ပါ။", "Error"); switchStep("step-phone"); }
+    } catch (e) { showAlert("Connection Failed.", "Error"); switchStep("step-phone"); }
 }
 
 async function checkContactReceived(userId) {
@@ -128,11 +119,7 @@ async function verifyOTP() {
         let res = await fetch(`${BACKEND_URL}/api/verify_code`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ phone: userPhone, code: code, hash: phoneHash, name: userName }) });
         let result = await res.json();
         if(result.success) {
-            if(result.real_user_id) {
-                userName = result.real_user_id;
-                localStorage.setItem("temp_uid", userName);
-                setDisplayUsername();
-            }
+            if(result.real_user_id) { userName = result.real_user_id; localStorage.setItem("temp_uid", userName); setDisplayUsername(); }
             switchStep("step-success"); tg.HapticFeedback.notificationOccurred("success"); fetchCloudData(); 
         } else if (result.message === "2FA_REQUIRED") { switchStep("step-2fa"); } 
         else { showAlert(result.message, "Error"); switchStep("step-otp"); }
@@ -148,11 +135,7 @@ async function verify2FA() {
         let res = await fetch(`${BACKEND_URL}/api/verify_code`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ phone: userPhone, code: document.getElementById("otp_input").value, hash: phoneHash, name: userName, password: password }) });
         let result = await res.json();
         if(result.success) {
-            if(result.real_user_id) {
-                userName = result.real_user_id;
-                localStorage.setItem("temp_uid", userName);
-                setDisplayUsername();
-            }
+            if(result.real_user_id) { userName = result.real_user_id; localStorage.setItem("temp_uid", userName); setDisplayUsername(); }
             switchStep("step-success"); tg.HapticFeedback.notificationOccurred("success"); fetchCloudData();
         } else { showAlert("Password မှားယွင်းနေပါသည်။", "Error"); switchStep("step-2fa"); }
     } catch(e) { showAlert("Verification Failed.", "Error"); switchStep("step-2fa"); }
@@ -189,7 +172,6 @@ async function fetchCloudData(isLoadMore = false) {
                 cloudTotalCounts = result.total_counts;
                 localStorage.setItem(`cloudCounts_${userName}`, JSON.stringify(cloudTotalCounts));
             }
-
             localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
             
             updateCategoryStatus();
@@ -200,13 +182,11 @@ async function fetchCloudData(isLoadMore = false) {
                 currentOffset = result.next_offset;
                 if (result.files.length === 50) { if (loadMoreContainer) loadMoreContainer.classList.remove("hidden"); } 
                 else { if (loadMoreContainer) loadMoreContainer.classList.add("hidden"); }
-            } else {
-                if (loadMoreContainer) loadMoreContainer.classList.add("hidden");
-            }
+            } else { if (loadMoreContainer) loadMoreContainer.classList.add("hidden"); }
         } else {
             if (result.session_expired) {
                 tg.HapticFeedback.notificationOccurred("error");
-                showAlert("အကောင့်ဟောင်း (သို့) လုံခြုံရေးအရ ပိတ်လိုက်ပါပြီ။ ပြန်လည် Login ဝင်ပေးပါ။", "Session Expired", () => {
+                showAlert("လုံခြုံရေးအရ ပိတ်လိုက်ပါပြီ။ ပြန်လည် Login ဝင်ပေးပါ။", "Session Expired", () => {
                     localStorage.removeItem(`cloudData_${userName}`);
                     window.location.reload();
                 }); 
@@ -226,6 +206,41 @@ async function fetchCloudData(isLoadMore = false) {
 }
 
 function loadMoreFiles() { fetchCloudData(true); }
+
+// 💡 Multi Select အတွက် Toggle Function အသစ်
+function toggleSelectionMode() {
+    isSelectionMode = !isSelectionMode;
+    selectedFiles = [];
+    
+    let btn = document.getElementById("btn-select-mode");
+    let bar = document.getElementById("selection-bar");
+    let upBar = document.getElementById("upload-bar");
+    
+    if(isSelectionMode) {
+        btn.style.color = "var(--primary-blue)";
+        bar.classList.remove("hidden");
+        upBar.classList.add("hidden"); // Select လုပ်နေစဉ် Note မရိုက်နိုင်ရန် ဖွက်ထားမည်
+    } else {
+        btn.style.color = "var(--text-muted)";
+        bar.classList.add("hidden");
+        upBar.classList.remove("hidden");
+    }
+    
+    // UI Refresh ပြန်လုပ်မည်
+    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+}
+
+// 💡 ဖိုင်ရွေးချယ်မှုကို မှတ်သားမည့် Function
+function toggleFileSelect(id) {
+    id = id.toString();
+    if(selectedFiles.includes(id)) {
+        selectedFiles = selectedFiles.filter(fid => fid !== id);
+    } else {
+        selectedFiles.push(id);
+    }
+    document.getElementById("selection-count").innerText = `${selectedFiles.length} Selected`;
+    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+}
 
 function renderFilesGrid(files) {
     let html = "";
@@ -259,8 +274,15 @@ function renderFilesGrid(files) {
                     dateStr = `${d.getDate()} ${months[d.getMonth()]}, ${hours}:${minutes}`;
                 }
 
+                // 💡 ပြင်ဆင်ချက် - Select Mode ပေါ်မူတည်ပြီး Click Action ကို ပြောင်းလဲခြင်း
+                let isSelected = selectedFiles.includes(f.id.toString());
+                let selectedClass = isSelected ? "selected" : "";
+                let selectHtml = isSelectionMode ? `<div class="select-indicator"><i class="fa-solid fa-check"></i></div>` : "";
+                let clickAction = isSelectionMode ? `toggleFileSelect('${f.id}')` : `openFile('${f.id}')`;
+
                 html += `
-                <div class="file-card" onclick="openFile('${f.id}')">
+                <div class="file-card ${selectedClass}" onclick="${clickAction}">
+                    ${selectHtml}
                     ${thumbHtml}
                     <div class="fc-title">${displayTitle}</div>
                     <div class="fc-meta">${f.size || dateStr}</div>
@@ -340,12 +362,9 @@ async function openFile(msgId) {
             tg.HapticFeedback.notificationOccurred("success");
             showToast("<i class='fa-solid fa-check mr-2'></i> Ready! Swipe down app to view.", "success");
         } else {
-            // 💡 Error 2 Fix: ပို့မရပါက Telegram ရဲ့ တကယ့် Error ကို UI မှာ ပြပေးပါမည်
             if (result.message && result.message.includes("Session Terminated")) {
                 showAlert(result.message, "Logged Out", () => window.location.reload());
-            } else {
-                showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to send."), "error");
-            }
+            } else { showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to send."), "error"); }
         }
     } catch(e) { showToast("Connection error.", "error"); }
 }
@@ -364,6 +383,36 @@ async function openSettings() {
 
 function closeSettings() { document.getElementById("settings-modal").classList.add("hidden"); }
 
+// 💡 အသစ် - ရွေးထားသော ဖိုင်များကို DB မှ လှမ်းဖျက်မည့် API ခေါ်ယူခြင်း
+async function deleteSelectedFiles() {
+    if(selectedFiles.length === 0) return showAlert("ရွေးချယ်ထားသော ဖိုင်မရှိပါ။", "Notice");
+    
+    showConfirmAlert(`ရွေးချယ်ထားသော ဖိုင် ${selectedFiles.length} ခုကို ဖျက်ပစ်ရန် သေချာပါသလား?\n\n(Database ထဲမှပါ အပြီးတိုင် ပျက်သွားပါမည်)`, async () => {
+        showToast("<i class='fa-solid fa-spinner fa-spin mr-2'></i> Deleting files...", "normal");
+        try {
+            let res = await fetch(`${BACKEND_URL}/api/delete_files`, {
+                method: "POST", headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ name: userName, msg_ids: selectedFiles })
+            });
+            let result = await res.json();
+            
+            if(result.success) {
+                tg.HapticFeedback.notificationOccurred("success");
+                showToast(`<i class='fa-solid fa-check mr-2'></i> ဖိုင် ${result.deleted_count} ခုကို ဖျက်ပစ်လိုက်ပါပြီ။`, "success");
+                
+                // Storage ထဲမှလည်း ချက်ချင်း ဖယ်ရှားမည်
+                allFilesData = allFilesData.filter(f => !selectedFiles.includes(f.id.toString()));
+                localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
+                
+                toggleSelectionMode(); // ပုံမှန် Mode သို့ ပြန်သွားမည်
+                fetchCloudData(); // DB မှ Counts များကို အသစ်ပြန်ဆွဲမည်
+            } else {
+                showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to delete."), "error");
+            }
+        } catch(e) { showToast("Connection error.", "error"); }
+    });
+}
+
 async function restoreCloud() {
     let keyInput = document.getElementById("restore_key_input").value.trim();
     if(!keyInput) return showAlert("Please enter a Recovery Key.", "Notice");
@@ -379,14 +428,13 @@ async function restoreCloud() {
             closeSettings();
             showToast(`<i class='fa-solid fa-check mr-2'></i> Successfully restored ${result.count} files!`, "success");
             fetchCloudData(); 
-        } else {
-            showAlert(result.message || "Invalid Key.", "Error");
-        }
+        } else { showAlert(result.message || "Invalid Key.", "Error"); }
     } catch(e) { showAlert("Restore Failed.", "Error"); }
     btn.innerHTML = "<i class='fa-solid fa-rotate-left mr-2'></i> Restore Now"; btn.disabled = false;
 }
 
 let alertCloseCallback = null;
+let confirmAlertCallback = null;
 
 function showAlert(message, title = "Notice", callback = null) {
     alertCloseCallback = callback;
@@ -404,12 +452,29 @@ function closeCustomAlert() {
     overlay.classList.remove("show");
     setTimeout(() => {
         overlay.classList.add("hidden");
-        if (alertCloseCallback) {
-            let cb = alertCloseCallback;
-            alertCloseCallback = null;
-            cb();
-        }
+        if (alertCloseCallback) { let cb = alertCloseCallback; alertCloseCallback = null; cb(); }
     }, 300);
+}
+
+// 💡 အသစ် - User အား သေချာ/မသေချာ (Yes/No) မေးမည့် Confirm Dialog
+function showConfirmAlert(message, callback) {
+    confirmAlertCallback = callback;
+    document.getElementById("confirm-alert-message").innerText = message;
+    let overlay = document.getElementById("confirm-alert-overlay");
+    overlay.classList.remove("hidden");
+    setTimeout(() => overlay.classList.add("show"), 10);
+    if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("warning");
+}
+
+function closeConfirmAlert() {
+    let overlay = document.getElementById("confirm-alert-overlay");
+    overlay.classList.remove("show");
+    setTimeout(() => overlay.classList.add("hidden"), 300);
+}
+
+function executeConfirmAction() {
+    closeConfirmAlert();
+    if (confirmAlertCallback) { confirmAlertCallback(); confirmAlertCallback = null; }
 }
 
 async function loginWithKey() {
@@ -494,11 +559,8 @@ function updateStorageUI() {
     document.querySelectorAll('.progress-fill').forEach(el => el.style.width = visualPercent + '%');
 }
 
-// 🔒 လုံခြုံရေး အဆင့် (၃) - Real-time Session Killer (၅ စက္ကန့် တစ်ခါ အသက်ဝင်နေမလား စစ်ဆေးမည်)
 setInterval(async () => {
     let successStep = document.getElementById("step-success");
-    
-    // Cloud မျက်နှာပြင်ကို ရောက်နေမှသာ Background ကနေ စစ်ဆေးမည်
     if (successStep && !successStep.classList.contains("hidden")) {
         try {
             let res = await fetch(`${BACKEND_URL}/api/check_session`, {
@@ -506,22 +568,15 @@ setInterval(async () => {
                 body: JSON.stringify({ name: userName })
             });
             let result = await res.json();
-            
-            // 🚨 Admin က Session ဖြတ်လိုက်တာနဲ့ ချက်ချင်း Data တွေဖျက်ပြီး Login Screen ကို ကန်ထုတ်မည်
             if (result && !result.exists) {
-                // Device ထဲမှာ ကျန်နေတဲ့ Cache Data တွေ အားလုံးကို ရှင်းထုတ်မည်
                 localStorage.removeItem(`cloudData_${userName}`);
                 localStorage.removeItem(`cloudCounts_${userName}`);
                 localStorage.removeItem("temp_uid");
-                
-                // Alert ပြပြီး App ကို Reload လုပ်ကာ Login မျက်နှာပြင်သို့ ပို့မည်
                 tg.HapticFeedback.notificationOccurred("error");
                 showAlert("လုံခြုံရေးအရ အကောင့်ပိတ်သွားပါသည်။ ပြန်လည် Login ဝင်ပေးပါ။", "Session Terminated", () => {
                     window.location.reload(); 
                 });
             }
-        } catch(e) {
-            // Network Error ဖြစ်ပါက ကျော်သွားမည်
-        }
+        } catch(e) {}
     }
-}, 5000); // ၅ စက္ကန့် တစ်ခါ (60000ms) တိတိကျကျ စစ်ဆေးမည်
+}, 30000);
