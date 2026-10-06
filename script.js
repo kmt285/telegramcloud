@@ -375,20 +375,19 @@ async function shareSelectedFiles() {
     try {
         let res = await fetch(`${BACKEND_URL}/api/share_files`, {
             method: "POST", headers: {"Content-Type": "application/json"},
-            // 💡 Server သို့ is_restricted တန်ဖိုးကို JSON ဖြင့် တိုက်ရိုက်ပို့မည်
             body: JSON.stringify({ name: userName, msg_ids: selectedFiles, is_restricted: isRestrictMode }) 
         });
         let result = await res.json();
         if(result.success) {
             tg.HapticFeedback.notificationOccurred("success");
             
-            // 💡 လင့်ခ်အနောက်တွင် ဘာမှတပ်စရာမလိုတော့ပါ၊ DB တွင်သာ မှတ်သွားပါမည်။
             currentBaseShareLink = result.link; 
             document.getElementById("share-link-input").value = currentBaseShareLink;
             
             document.getElementById("share-alert-overlay").classList.remove("hidden");
             setTimeout(() => document.getElementById("share-alert-overlay").classList.add("show"), 10);
-            cancelSelection();
+            
+            // 💡 ဤနေရာမှ cancelSelection() ကို ဖြုတ်လိုက်ပါပြီ။ (Popup မပိတ်မချင်း ရွေးထားသည်များ မပျောက်တော့ပါ)
         } else {
             showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to share."), "error");
         }
@@ -396,7 +395,6 @@ async function shareSelectedFiles() {
     btn.innerHTML = originalHtml; btn.disabled = false;
 }
 
-// 💡 Restricted Button ကို နှိပ်သည့်အခါ UI ပြောင်းလဲမှုသာ လုပ်ဆောင်မည် (URL ကို မထိတော့ပါ)
 function toggleRestrictMode() {
     isRestrictMode = !isRestrictMode;
     let icon = document.getElementById("restrict-icon");
@@ -412,20 +410,17 @@ function toggleRestrictMode() {
         if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     }
     
-    // 💡 အရေးကြီးသည်- Toggle ပြောင်းတိုင်း Server ဆီမှ လင့်ခ်အသစ်ပြန်တောင်းရန် လိုအပ်သောကြောင့် 
-    // input box ထဲမှလင့်ခ်ကို ဖျောက်ထားပြီး (သို့) Loading ပြ၍ shareSelectedFiles ကို ထပ်မံခေါ်ပေးရန်လိုသည်။
-    // အလွယ်ကူဆုံးနည်းမှာ Toggle နှိပ်လျှင် နောက်ကွယ်မှ API ကို တိတ်တဆိတ် ထပ်ခေါ်ပေးခြင်းဖြစ်သည်။
     updateShareLinkQuietly();
 }
 
-// Toggle ပြောင်းသည့်အခါ လင့်ခ်အသစ် (Restricted/Unrestricted) ပြန်ထုတ်ရန်
 async function updateShareLinkQuietly() {
     let input = document.getElementById("share-link-input");
     input.value = "Updating link...";
     try {
+        // 💡 ရွေးချယ်ထားဆဲဖြစ်သော selectedFiles ကိုသာ အသုံးပြုမည်
         let res = await fetch(`${BACKEND_URL}/api/share_files`, {
             method: "POST", headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ name: userName, msg_ids: selectedFiles.length > 0 ? selectedFiles : previouslySelectedFiles, is_restricted: isRestrictMode }) 
+            body: JSON.stringify({ name: userName, msg_ids: selectedFiles, is_restricted: isRestrictMode }) 
         });
         let result = await res.json();
         if(result.success) {
@@ -440,7 +435,10 @@ async function updateShareLinkQuietly() {
 function closeShareAlert() {
     let overlay = document.getElementById("share-alert-overlay");
     overlay.classList.remove("show");
-    setTimeout(() => overlay.classList.add("hidden"), 300);
+    setTimeout(() => {
+        overlay.classList.add("hidden");
+        cancelSelection(); // 💡 Popup အလွှာ ပိတ်သွားချိန်မှသာ Selection အမှတ်အသားများကို ဖြုတ်ပါမည်
+    }, 300);
 }
 
 // 💡 FIX: Copy Link အလုပ်လုပ်စေရန် (Mobile/iOS Support အပါအဝင်)
