@@ -206,10 +206,50 @@ async function fetchCloudData(isLoadMore = false) {
 
 function loadMoreFiles() { fetchCloudData(true); }
 
-// 💡 အသစ် - ရွေးချယ်ထားသော ဖိုင်များကို မှတ်ရန်
+// 💡 အသစ် - Long Press နှင့် Right Click UX အတွက် Variable များ
 let selectedFiles = [];
+let isSelectionMode = false;
+let pressTimer;
+let justSelected = false;
 
-// ဖိုင်ပေါ်က အမှန်ခြစ်လေးကို နှိပ်လျှင် အလုပ်လုပ်မည့်စနစ် (Toggle Select)
+// 📱 Long Press (ဖုန်းအတွက်)
+function handleTouchStart(e, id) {
+    pressTimer = setTimeout(() => {
+        enterSelectionMode(id);
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred("heavy"); // ဖိထားကြောင်းသိစေရန် တုန်ခါပေးမည်
+    }, 500); // 0.5 စက္ကန့် ဖိထားလျှင် အလုပ်လုပ်မည်
+}
+
+function handleTouchEnd() { clearTimeout(pressTimer); }
+function handleTouchMove() { clearTimeout(pressTimer); } // Scroll ဆွဲနေလျှင် Select မဖြစ်စေရန်
+
+// 💻 Right Click (ကွန်ပျူတာအတွက်)
+function handleRightClick(e, id) {
+    e.preventDefault(); // Browser ၏ Right-click menu ထွက်လာခြင်းကို တားမည်
+    enterSelectionMode(id);
+}
+
+// 🎯 Selection Mode စတင်ခြင်း
+function enterSelectionMode(id) {
+    if (!isSelectionMode) {
+        isSelectionMode = true;
+        justSelected = true;
+        document.body.classList.add("selection-active"); // CSS Class ထည့်မည်
+        toggleFileSelect(id);
+        setTimeout(() => justSelected = false, 300); // Long press ပြီးသွားလျှင် ချက်ချင်းပြန်ပိတ်မသွားစေရန်
+    }
+}
+
+// 🖱️ ဖိုင်ကို ရိုးရိုးနှိပ်ခြင်း (Click)
+function handleFileClick(id) {
+    if (justSelected) return; 
+    if (isSelectionMode) {
+        toggleFileSelect(id); // Select Mode တွင်ဆိုပါက အမှန်ခြစ် တပ်/ဖြုတ် လုပ်မည်
+    } else {
+        openFile(id); // ပုံမှန်အချိန်ဆိုလျှင် ဖိုင်ကို ဖွင့်ပြ/ပို့ပေးမည်
+    }
+}
+
 function toggleFileSelect(id) {
     id = id.toString();
     if(selectedFiles.includes(id)) {
@@ -226,30 +266,24 @@ function toggleFileSelect(id) {
         upBar.classList.add("hidden");
         document.getElementById("selection-count").innerText = `${selectedFiles.length} Selected`;
     } else {
-        bar.classList.add("hidden");
-        upBar.classList.remove("hidden");
+        cancelSelection(); // ဖိုင်အားလုံးကို Deselect လုပ်လိုက်ပါက Mode ထဲမှ အလိုလို ထွက်မည်
     }
     
-    // UI တွင် အမှန်ခြစ်လေး ချက်ချင်းပေါ်သွားစေရန်
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
-// 💡 အစားထိုးရန် - Select လုပ်ထားသမျှကို ပယ်ဖျက်ပြီး မူလအခြေအနေသို့ ပြန်သွားရန်
+// ❌ Selection အားလုံးကို ပယ်ဖျက်ခြင်း (Cancel နှိပ်လျှင်)
 function cancelSelection() {
     selectedFiles = [];
-    isSelectionMode = false; // 💡 ဒါလေး ထည့်ပေးဖို့လိုပါတယ်
-    
-    let btn = document.getElementById("btn-select-mode");
-    if (btn) btn.style.color = "var(--text-muted)"; // Select icon အရောင်ကို မူလအတိုင်းပြန်ထားရန်
+    isSelectionMode = false;
+    document.body.classList.remove("selection-active"); // UI ကို မူလအတိုင်း ပြန်ထားမည်
     
     document.getElementById("selection-bar").classList.add("hidden");
     document.getElementById("upload-bar").classList.remove("hidden");
-    
-    // UI Refresh ပြန်လုပ်မည် (Checkbox လေးတွေ ဖျောက်ရန်)
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
-// UI တွင် ဖိုင်များကို ပြသခြင်း (အမှန်ခြစ် Checkbox လေး ပါဝင်လာပါမည်)
+// 🖼️ UI တွင် ဖိုင်များကို ပြသခြင်း (Event Listeners များ အသစ်ထည့်ထားသည်)
 function renderFilesGrid(files) {
     let html = "";
     if(files.length === 0) {
@@ -277,14 +311,18 @@ function renderFilesGrid(files) {
                     dateStr = `${d.getDate()} ${months[d.getMonth()]}, ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
                 }
 
-                // 💡 ဖိုင်ပေါ်က Checkbox အဝိုင်းလေးကို နှိပ်လျှင် Select မှတ်မည်၊ ဖိုင်ကိုနှိပ်လျှင် ဖွင့်မည်
                 let isSelected = selectedFiles.includes(f.id.toString());
                 let selectedClass = isSelected ? "selected" : "";
-                let selectHtml = `<div class="select-indicator" onclick="event.stopPropagation(); toggleFileSelect('${f.id}')"><i class="fa-solid fa-check"></i></div>`;
-
+                
+                // 💡 ပြင်ဆင်ချက် - Mobile (Long Press) နှင့် Desktop (Right Click) Event များ ထည့်သွင်းထားသည်
                 html += `
-                <div class="file-card ${selectedClass}" onclick="openFile('${f.id}')">
-                    ${selectHtml}
+                <div class="file-card ${selectedClass}" 
+                     onclick="handleFileClick('${f.id}')"
+                     oncontextmenu="handleRightClick(event, '${f.id}')"
+                     ontouchstart="handleTouchStart(event, '${f.id}')"
+                     ontouchend="handleTouchEnd()"
+                     ontouchmove="handleTouchMove()">
+                    <div class="select-indicator"><i class="fa-solid fa-check"></i></div>
                     ${thumbHtml}
                     <div class="fc-title">${displayTitle}</div>
                     <div class="fc-meta">${f.size || dateStr}</div>
