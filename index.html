@@ -13,16 +13,13 @@
     <div class="app-container">
         
         <div id="auth-flow" class="w-100 h-100">
-            <!-- 💡 Loading Spinner ကို အလယ်တည့်တည့်ရောက်စေရန် style="height: 100vh;" ထည့်သွင်းထားပါသည် -->
             <div id="step-loading" class="step active flex-center" style="height: 100vh;">
                 <div class="modern-spinner"></div>
                 <p id="loading-text" class="sub-text mt-3">Connecting to Cloud...</p>
             </div>
             
-            <!-- 💡 Main Login UI (Responsive & Professional) -->
             <div id="step-phone" class="step hidden flex-center login-wrapper">
                 <div class="auth-card">
-                    <!-- 💡 Telegram Logo ဖြင့် အစားထိုးထားပါသည် -->
                     <div class="login-logo-box telegram-bg">
                         <i class="fa-brands fa-telegram"></i>
                     </div>
@@ -39,7 +36,6 @@
                         <button onclick="handleDesktopContact()" class="btn-primary w-100" style="background: var(--text-main); color: var(--bg-color);">Send OTP</button>
                     </div>
                     
-                    <!-- 💡 ဖုန်းနံပါတ် (သို့) Access Key ဖြင့်ဝင်ရန် ရွေးချယ်နိုင်သော အပိုင်း -->
                     <div class="w-100" style="display: flex; justify-content: space-between; font-size: 13px; margin-top: 25px;">
                         <span class="toggle-link" style="margin-top:0;" onclick="toggleManualLogin()">Use Phone Number</span>
                         <span class="toggle-link" style="margin-top:0;" onclick="switchStep('step-key-login')">Login with Access Key</span>
@@ -47,7 +43,6 @@
                 </div>
             </div>
 
-            <!-- 💡 အသစ် - Access Key ဖြင့် တိုက်ရိုက်ဝင်မည့် UI -->
             <div id="step-key-login" class="step hidden flex-center login-wrapper">
                 <div class="auth-card">
                     <div class="login-logo-box" style="background: rgba(15, 157, 88, 0.1); color: #0f9d58;"><i class="fa-solid fa-key"></i></div>
@@ -59,7 +54,6 @@
                 </div>
             </div>
 
-            <!-- 💡 OTP UI (Fixing button spacing and width) -->
             <div id="step-otp" class="step hidden flex-center login-wrapper">
                 <div class="auth-card">
                     <div class="login-logo-box otp-bg">
@@ -67,13 +61,11 @@
                     </div>
                     <h2 class="title">Enter PIN</h2>
                     <p class="sub-text mb-4">We've sent a code to your Telegram app.</p>
-                    <!-- 💡 mb-4 (Margin Bottom) ထည့်သွင်း၍ Button နှင့် ခွာထားပါသည် -->
                     <input type="number" id="otp_input" placeholder="• • • • •" class="input-box text-center text-lg mb-4" style="letter-spacing: 5px; font-weight: bold;" oninput="if(this.value.length > 5) this.value = this.value.slice(0, 5);">
                     <button onclick="verifyOTP()" class="btn-primary w-100 btn-glow">Verify</button>
                 </div>
             </div>
 
-            <!-- 💡 2FA UI (Fixing button spacing and width) -->
             <div id="step-2fa" class="step hidden flex-center login-wrapper">
                 <div class="auth-card">
                     <div class="login-logo-box telegram-bg">
@@ -89,9 +81,7 @@
 
         <div id="step-success" class="step hidden drive-layout">
             <aside class="sidebar">
-                <!-- 💡 အပေါ်ပိုင်း (Logo နှင့် Menu များ) -->
                 <div class="sidebar-top">
-                    <!-- 💡 ID ထည့်သွင်းထားသည် (JS မှ နာမည်လှမ်းချိန်းရန်) -->
                     <h2 class="brand" id="sidebar-brand-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 18px;">
                         <i class="fa-brands fa-telegram text-blue"></i> Cloud
                     </h2>
@@ -105,7 +95,6 @@
                     </ul>
                 </div>
                 
-                <!-- 💡 အသစ် - Desktop အတွက် အောက်ခြေ Storage UI -->
                 <div class="storage-box">
                     <div class="storage-header"><i class="fa-solid fa-cloud text-blue"></i> Storage</div>
                     <div class="progress-bar"><div class="progress-fill"></div></div>
@@ -115,6 +104,8 @@
             <main class="main-content">
                 <header class="topbar">
                     <div class="search-bar"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search in Drive..." onkeyup="searchFiles(this.value)"></div>
+                    <!-- 💡 အသစ် - ဖိုင်အများကြီးရွေးရန် Select Mode ခလုတ် -->
+                    <button class="btn-refresh" onclick="toggleSelectionMode()" id="btn-select-mode" title="Select Files"><i class="fa-solid fa-check-double"></i></button>
                     <button class="btn-refresh" onclick="fetchCloudData()"><i class="fa-solid fa-rotate-right"></i></button>
                     <button class="btn-refresh" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
                 </header>
@@ -126,9 +117,19 @@
                     <button id="btn-load-more" onclick="loadMoreFiles()" class="btn-primary" style="padding: 10px 20px; font-size: 14px; width: auto; min-width: 150px;">
                         <i class="fa-solid fa-cloud-arrow-down mr-2"></i> Load More
                     </button>
+                    </div>
                 </div>
+
+                <!-- 💡 အသစ် - Delete လုပ်ရန် Action Bar -->
+                <div id="selection-bar" class="selection-bar hidden">
+                    <span id="selection-count" class="font-bold">0 Selected</span>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn-action btn-danger" onclick="deleteSelectedFiles()"><i class="fa-solid fa-trash"></i> Delete</button>
+                        <button class="btn-action" onclick="toggleSelectionMode()"><i class="fa-solid fa-xmark"></i> Cancel</button>
+                    </div>
                 </div>
-                <div class="upload-bar">
+
+                <div class="upload-bar" id="upload-bar">
                     <input type="text" id="note_input" placeholder="Type a note to save to cloud..." class="input-box-alt">
                     <button onclick="saveCloudNote()" class="btn-upload"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
@@ -143,9 +144,7 @@
             </nav>
         </div>
 
-        <!-- ⚙️ Settings & Restore Modal -->
         <div id="settings-modal" class="settings-modal hidden">
-            <!-- 💡 Card Design ကို ဖြုတ်ပြီး မူလပုံစံအတိုင်း ပြန်ထားပါသည် -->
             <div class="settings-container">
                 <div class="settings-header">
                     <h2 style="font-size:20px;"><i class="fa-solid fa-shield-halved text-blue"></i> Cloud Settings</h2>
@@ -153,7 +152,6 @@
                 </div>
                 
                 <div class="settings-content">
-                    <!-- 💡 အသစ် - Mobile အတွက် Settings ထဲရှိ Storage UI -->
                     <div class="w-100 mb-4" style="background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
                         <div class="storage-header" style="margin-bottom: 10px;"><i class="fa-solid fa-cloud text-blue"></i> Storage (Unlimited)</div>
                         <div class="progress-bar" style="margin-bottom: 8px;"><div class="progress-fill"></div></div>
@@ -162,7 +160,6 @@
                     <h3 class="title" style="font-size:16px;">🔑 Your Recovery Key</h3>
                     <p class="sub-text mb-3">Save this key securely. Tap on the key to copy it.</p>
                     
-                    <!-- 💡 Key Box နှင့် Button အကျယ်ကို တူညီအောင် ညှိထားပါသည် -->
                     <div class="key-box-wrapper mb-3" onclick="copyRecoveryKey()" title="Click to copy">
                         <div id="recovery_key_display" class="key-text">Loading...</div>
                         <i class="fa-regular fa-copy copy-icon"></i>
@@ -180,17 +177,32 @@
 
     </div>
 
-    <!-- 💡 Custom Alert Overlay -->
-        <div id="custom-alert-overlay" class="custom-alert-overlay hidden">
-            <div class="custom-alert-box">
-                <div class="custom-alert-icon">
-                    <i class="fa-solid fa-circle-exclamation"></i>
-                </div>
-                <h3 class="title" id="custom-alert-title" style="font-size:18px;">Notice</h3>
-                <p class="sub-text" id="custom-alert-message" style="font-size:14px; margin-bottom: 24px;">Message goes here</p>
-                <button onclick="closeCustomAlert()" class="btn-primary w-100 btn-glow">OK</button>
+    <!-- 💡 Custom Alert Overlay (OK Only) -->
+    <div id="custom-alert-overlay" class="custom-alert-overlay hidden">
+        <div class="custom-alert-box">
+            <div class="custom-alert-icon">
+                <i class="fa-solid fa-circle-exclamation"></i>
+            </div>
+            <h3 class="title" id="custom-alert-title" style="font-size:18px;">Notice</h3>
+            <p class="sub-text" id="custom-alert-message" style="font-size:14px; margin-bottom: 24px;">Message goes here</p>
+            <button onclick="closeCustomAlert()" class="btn-primary w-100 btn-glow">OK</button>
+        </div>
+    </div>
+
+    <!-- 💡 အသစ် - Delete Confirm Alert Overlay (Yes / No) -->
+    <div id="confirm-alert-overlay" class="custom-alert-overlay hidden">
+        <div class="custom-alert-box">
+            <div class="custom-alert-icon" style="color:#ea4335;">
+                <i class="fa-solid fa-trash-can"></i>
+            </div>
+            <h3 class="title" style="font-size:18px;">Confirm Delete</h3>
+            <p class="sub-text" id="confirm-alert-message" style="font-size:14px; margin-bottom: 24px;">Are you sure?</p>
+            <div style="display:flex; gap:10px; width:100%;">
+                <button onclick="closeConfirmAlert()" class="btn-primary w-100" style="background:var(--text-muted); box-shadow:none;">Cancel</button>
+                <button id="btn-confirm-action" class="btn-primary w-100 btn-danger" onclick="executeConfirmAction()">Delete</button>
             </div>
         </div>
+    </div>
     
     <script src="script.js"></script>
 </body>
