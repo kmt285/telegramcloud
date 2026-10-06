@@ -340,3 +340,38 @@ input[type="number"] {
     from { opacity: 0.7; }
     to { opacity: 1; }
 }
+
+/* 💡 Selection & Delete Action UI */
+.file-card.selected { 
+    border: 2px solid var(--primary-blue); 
+    background: rgba(26, 115, 232, 0.05); 
+    transform: scale(0.96); 
+}
+.file-card { position: relative; transition: transform 0.2s, border 0.2s, background 0.2s; }
+.select-indicator { 
+    position: absolute; top: 8px; right: 8px; 
+    width: 22px; height: 22px; border-radius: 50%; 
+    background: rgba(0,0,0,0.3); color: transparent; 
+    display: flex; align-items: center; justify-content: center; 
+    border: 2px solid white; z-index: 2; transition: 0.2s; font-size: 11px; 
+}
+.file-card.selected .select-indicator { 
+    background: var(--primary-blue); color: white; border-color: var(--primary-blue); 
+}
+
+.selection-bar { 
+    position: absolute; bottom: 0; left: 0; right: 0; 
+    background: var(--card-bg); padding: 12px 20px; 
+    display: flex; justify-content: space-between; align-items: center; 
+    border-top: 1px solid var(--border-color); z-index: 20; 
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.05); 
+}
+.font-bold { font-weight: 600; font-size: 14px; color: var(--primary-blue); }
+.btn-action { padding: 8px 16px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; color: white; background: var(--text-muted); font-size: 14px; display:flex; align-items:center; gap:6px;}
+.btn-danger { background: #ea4335 !important; box-shadow: 0 4px 10px rgba(234, 67, 53, 0.2); }
+.btn-danger:active { transform: scale(0.95); }
+
+/* Mobile အတွက် Menu အပေါ်ရောက်နေအောင် ရှောင်ပေးခြင်း */
+@media (max-width: 768px) {
+    .selection-bar { bottom: 60px; }
+}
