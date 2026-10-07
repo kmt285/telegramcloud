@@ -76,6 +76,43 @@ input[type="number"] { -moz-appearance: textfield; }
 .fc-title { font-size: 13px; font-weight: 500; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fc-meta { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
 
+
+/* 💡 Document File Types Specific Colors */
+.fc-icon.pdf { color: #ea4335; } /* Red for PDF */
+.fc-icon.zip { color: #fbbc04; } /* Yellow for ZIP */
+.fc-icon.apk { color: #34a853; } /* Green for APK */
+.fc-icon.audio { color: #00bcd4; } /* Cyan for Audio */
+.fc-icon.excel { color: #0f9d58; } /* Dark Green for Excel */
+.fc-icon.word { color: #4285f4; } /* Blue for Word */
+
+/* 💡 Video Play Button Overlay & Wrapper */
+.thumb-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.video-overlay {
+    position: absolute;
+    top: calc(50% - 3px); /* အနည်းငယ် အပေါ်သို့ ရွှေ့ထားသည် */
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 34px;
+    height: 34px;
+    background: rgba(0, 0, 0, 0.55);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    padding-left: 2px; /* Play icon အလယ်တည့်စေရန် */
+    pointer-events: none; /* Click နှိပ်၍ရရန် */
+    backdrop-filter: blur(2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
 /* 💡 File Card & Selection UI (Long Press / Right Click) */
 .file-card { 
     background: var(--card-bg); border-radius: 12px; padding: 5px; display: flex; flex-direction: column; align-items: center; cursor: pointer;
