@@ -305,13 +305,28 @@ function renderFilesGrid(files) {
         files.forEach(f => {
             try {
                 let iconClass = "fa-file-lines doc";
+                
+                // 💡 File Extension ကိုစစ်ဆေးရန် file_name ကိုပါ ယူသုံးခြင်း
+                let fileName = (f.file_name || f.title || "").toLowerCase();
+                
                 if (f.type === "photo") iconClass = "fa-image photo";
                 else if (f.type === "video") iconClass = "fa-film video";
                 else if (f.type === "link") iconClass = "fa-link link";
                 else if (f.type === "text") iconClass = "fa-note-sticky text";
+                else if (f.type === "doc") {
+                    if (fileName.endsWith(".pdf")) iconClass = "fa-file-pdf pdf";
+                    else if (fileName.match(/\.(zip|rar|7z|tar)$/)) iconClass = "fa-file-zipper zip";
+                    else if (fileName.endsWith(".apk")) iconClass = "fa-brands fa-android apk";
+                    else if (fileName.match(/\.(mp3|wav|ogg|m4a)$/)) iconClass = "fa-file-audio audio";
+                    else if (fileName.match(/\.(xls|xlsx|csv)$/)) iconClass = "fa-file-excel excel";
+                    else if (fileName.match(/\.(doc|docx)$/)) iconClass = "fa-file-word word";
+                }
                 
+                // 💡 Video ဖြစ်ပါက Play Button Overlay ထည့်ပေးခြင်း
+                let videoOverlay = (f.type === "video") ? `<div class="video-overlay"><i class="fa-solid fa-play"></i></div>` : "";
+
                 let thumbHtml = f.thumb_file_id 
-                    ? `<img src="${BACKEND_URL}/api/thumb/${f.thumb_file_id}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`
+                    ? `<div class="thumb-wrapper"><img src="${BACKEND_URL}/api/thumb/${f.thumb_file_id}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">${videoOverlay}</div>`
                     : `<i class="fa-solid ${iconClass} fc-icon"></i>`;
 
                 let safeTitle = f.title ? f.title.replace(/'/g, "\\'").replace(/"/g, "&quot;") : "Unknown File";
