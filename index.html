@@ -111,26 +111,27 @@
                 </header>
                 
                 <div class="content-area">
-                    <!-- 💡 Breadcrumb Navigation (Windows File Explorer ပုံစံ) -->
-                    <div id="breadcrumb-container" class="breadcrumb-container">
-                        <span class="breadcrumb-current">My Drive</span>
+                    <!-- 💡 Google Drive Style Header (Breadcrumb + Sort Button) -->
+                    <div class="list-header">
+                        <div id="breadcrumb-container" class="breadcrumb-container" style="margin-bottom:0;">
+                            <span class="breadcrumb-current">My Drive</span>
+                        </div>
+                        <div class="current-sort-btn" onclick="openSortMenu()">
+                            <span id="current-sort-label">Date</span> 
+                            <i class="fa-solid fa-arrow-down" id="current-sort-icon"></i>
+                        </div>
                     </div>
-                    <!-- 💡 Professional Sort Bar -->
-                    <div class="sort-bar" id="sort-bar">
-                        <div class="sort-item" onclick="toggleSort('name')">Name <i class="fa-solid fa-arrow-down"></i></div>
-                        <div class="sort-item" onclick="toggleSort('date')">Date <i class="fa-solid fa-arrow-down"></i></div>
-                        <div class="sort-item" onclick="toggleSort('size')">Size <i class="fa-solid fa-arrow-down"></i></div>
-                    </div>
+                    
                     <p id="cloud-status" class="sub-text mb-4">Syncing...</p>
                     <div id="cloud-files-grid" class="file-grid"></div>
                     <div id="load-more-container" class="w-100 flex-center mt-3 hidden">
-                    <button id="btn-load-more" onclick="loadMoreFiles()" class="btn-primary" style="padding: 10px 20px; font-size: 14px; width: auto; min-width: 150px;">
-                        <i class="fa-solid fa-cloud-arrow-down mr-2"></i> Load More
-                    </button>
+                        <button id="btn-load-more" onclick="loadMoreFiles()" class="btn-primary" style="padding: 10px 20px; font-size: 14px; width: auto; min-width: 150px;">
+                            <i class="fa-solid fa-cloud-arrow-down mr-2"></i> Load More
+                        </button>
                     </div>
                 </div>
 
-                <!-- 💡 Google Drive Style Selection Bar -->
+                <!-- 💡 Selection Bar -->
                 <div id="selection-bar" class="selection-bar hidden">
                     <div class="selection-left">
                         <button class="btn-icon-only" onclick="cancelSelection()"><i class="fa-solid fa-xmark"></i></button>
@@ -143,16 +144,36 @@
                     </div>
                 </div>
 
-                <!-- 💡 Upload & New Folder Bar (Google Drive ပုံစံ တွဲထားသည်) -->
-                <div class="upload-bar flex-center" id="upload-bar" style="padding: 10px 20px; flex-direction: row;">
-                    <button onclick="goToBotForUpload()" class="btn-primary w-100 btn-glow" style="display:flex; align-items:center; justify-content:center; gap:8px; border-radius: 12px;">
-                        <i class="fa-solid fa-cloud-arrow-up"></i> Upload File
-                    </button>
-                    <button onclick="openCreateFolderModal()" class="btn-primary btn-glow" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px 20px;" title="New Folder">
-                        <i class="fa-solid fa-folder-plus" style="color: #fbbc04;"></i>
+                <!-- 💡 Google Drive Style Floating Action Button (FAB) -->
+                <div class="fab-overlay hidden" id="fab-overlay" onclick="toggleFabMenu()"></div>
+                <div class="fab-container" id="main-fab-container">
+                    <div class="fab-menu hidden" id="fab-menu">
+                        <div class="fab-item" onclick="openCreateFolderModal(); toggleFabMenu();">
+                            <span class="fab-label">Folder</span>
+                            <div class="fab-icon"><i class="fa-solid fa-folder-plus"></i></div>
+                        </div>
+                        <div class="fab-item" onclick="goToBotForUpload(); toggleFabMenu();">
+                            <span class="fab-label">Upload</span>
+                            <div class="fab-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                        </div>
+                    </div>
+                    <button class="fab-main" id="fab-main-btn" onclick="toggleFabMenu()">
+                        <i class="fa-solid fa-plus"></i>
                     </button>
                 </div>
             </main>
+
+            <!-- 💡 Clean Sort Menu Modal (<body> မပိတ်ခင် အောက်ဆုံးနားတွင် ထားရန်) -->
+            <div id="sort-menu-overlay" class="custom-alert-overlay hidden" onclick="closeSortMenu()">
+                <div class="custom-alert-box" style="padding: 20px; text-align: left; border-radius: 20px;" onclick="event.stopPropagation()">
+                    <h3 class="title" style="font-size:18px; margin-bottom:15px; color: var(--text-main);">Sort by</h3>
+                    <ul class="clean-action-list">
+                        <li onclick="applySort('name')" id="sort-name"><i class="fa-solid fa-font"></i> Name <i class="sort-dir-icon" style="margin-left:auto;"></i></li>
+                        <li onclick="applySort('date')" id="sort-date"><i class="fa-regular fa-clock"></i> Date modified <i class="sort-dir-icon" style="margin-left:auto;"></i></li>
+                        <li onclick="applySort('size')" id="sort-size"><i class="fa-solid fa-hard-drive"></i> File size <i class="sort-dir-icon" style="margin-left:auto;"></i></li>
+                    </ul>
+                </div>
+            </div>
             <nav class="bottom-nav">
                 <div class="nav-item active" onclick="filterFiles('all', this)"><i class="fa-solid fa-folder"></i><span>Files</span></div>
                 <div class="nav-item" onclick="filterFiles('photo', this)"><i class="fa-solid fa-image"></i><span>Photos</span></div>
