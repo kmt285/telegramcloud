@@ -183,7 +183,7 @@ async function fetchCloudData(isLoadMore = false) {
                 localStorage.setItem(`cloudCounts_${userName}`, JSON.stringify(cloudTotalCounts));
             }
             localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
-            
+            renderBreadcrumb();
             updateCategoryStatus();
             updateStorageUI(); 
             renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
@@ -563,7 +563,7 @@ function filterFiles(type, element) {
     if(element) element.classList.add('active');
     
     let titles = { 'all': 'My Drive', 'photo': 'Photos', 'video': 'Videos', 'doc': 'Documents', 'link': 'Links' };
-    document.getElementById('current-category').innerText = titles[type];
+    renderBreadcrumb();
     
     updateCategoryStatus();
     renderFilesGrid(type === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
