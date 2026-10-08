@@ -275,18 +275,38 @@ function toggleFileSelect(id) {
         bar.classList.remove("hidden");
         if(upBar) upBar.classList.add("hidden");
         document.getElementById("selection-count").innerText = `${selectedFiles.length} Selected`;
-        
-        // 💡 ဖိုင် (၁) ခုတည်း ရွေးထားမှသာ Rename ခလုတ်ကို ပြမည်
-        let renameBtn = document.getElementById("btn-rename-action");
-        if(renameBtn) renameBtn.style.display = selectedFiles.length === 1 ? "flex" : "none";
-        let moveBtn = document.getElementById("btn-move-action");
-    if(moveBtn) moveBtn.style.display = selectedFiles.length > 0 ? "flex" : "none";
-        
     } else {
         cancelSelection(); 
     }
     
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+}
+
+// 💡 Google Drive Style More Menu
+function openMoreMenu() {
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    let overlay = document.getElementById("more-menu-overlay");
+    let title = document.getElementById("bottom-sheet-title");
+    let renameBtn = document.getElementById("action-rename");
+    
+    // File အရေအတွက် ပြပေးခြင်း
+    title.innerText = `${selectedFiles.length} item${selectedFiles.length > 1 ? 's' : ''} selected`;
+    
+    // ဖိုင် (၁) ခုတည်း ရွေးထားမှသာ Rename ခလုတ်ကို ပြမည်
+    if (selectedFiles.length === 1) {
+        renameBtn.style.display = "flex";
+    } else {
+        renameBtn.style.display = "none";
+    }
+    
+    overlay.classList.remove("hidden");
+    setTimeout(() => { overlay.classList.add("show"); }, 10);
+}
+
+function closeMoreMenu() {
+    let overlay = document.getElementById("more-menu-overlay");
+    overlay.classList.remove("show");
+    setTimeout(() => { overlay.classList.add("hidden"); }, 300);
 }
 
 let previouslySelectedFiles = [];
