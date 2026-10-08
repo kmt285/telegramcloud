@@ -329,7 +329,6 @@ function cancelSelection() {
 function renderFilesGrid(files) {
     let html = "";
     
-    // Current Category က All ဖြစ်နေရင် လက်ရှိ Folder အောက်က File တွေကိုပဲ ပြမည်
     let displayFiles = files;
     if (currentCategory === 'all') {
         displayFiles = files.filter(f => (f.parent_id || 'root') === currentFolderId);
@@ -338,21 +337,13 @@ function renderFilesGrid(files) {
     if(displayFiles.length === 0 && currentFolderId === 'root') {
         html = "<div class='flex-center' style='grid-column: 1 / -1; color: var(--text-muted);'><i class='fa-brands fa-telegram mb-2' style='font-size:40px;'></i><p>Your drive is empty.</p></div>";
     } else {
-        // Folder အထဲရောက်နေရင် Back ခလုတ်ကို အရင်ဆုံး ပြပေးမည်
-        if (currentCategory === 'all' && currentFolderId !== 'root') {
-            html += `
-            <div class="file-card" onclick="goBackFolder()">
-                <i class="fa-solid fa-arrow-left fc-icon" style="color:var(--text-muted); font-size: 28px; margin: 20px 0;"></i>
-                <div class="fc-title" style="font-weight:bold; color:var(--text-muted);">🔙 Back</div>
-            </div>`;
-        }
-
+        // 💡 ဤနေရာတွင် ရှိနေသော Back Button အဟောင်းကို အပြီးတိုင် ဖျက်ပစ်လိုက်ပါပြီ
+        
         displayFiles.forEach(f => {
             try {
-                let iconClass = "fa-file-lines doc"; // Default Icon
+                let iconClass = "fa-file-lines doc"; 
                 let fileName = (f.file_name || f.title || "").toLowerCase();
 
-                // 💡 File Extension များကို စစ်ဆေး၍ သက်ဆိုင်ရာ Icon ပြောင်းပေးခြင်း
                 if (f.type === "folder") iconClass = "fa-folder folder";
                 else if (f.type === "photo") iconClass = "fa-image photo";
                 else if (f.type === "video") iconClass = "fa-film video";
@@ -365,17 +356,11 @@ function renderFilesGrid(files) {
                 else if (fileName.match(/\.(xls|xlsx|csv)\$/)) iconClass = "fa-file-excel excel";
                 else if (fileName.match(/\.(doc|docx)\$/)) iconClass = "fa-file-word word";
                 
-                // 💡 Thumbnail ရှိလျှင် ဖော်ပြခြင်း နှင့် Video ဖြစ်လျှင် Play Button Overlay အုပ်ခြင်း
                 let thumbHtml = "";
                 if (f.thumb_file_id) {
                     let imgTag = `<img src="${BACKEND_URL}/api/thumb/${f.thumb_file_id}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`;
-                    
-                    if (f.type === "video") {
-                        // Video ဆိုလျှင် Play Icon လေး အပေါ်ကနေ ထပ်တင်ပေးမည်
-                        thumbHtml = `<div class="thumb-wrapper">${imgTag}<div class="video-overlay"><i class="fa-solid fa-play"></i></div></div>`;
-                    } else {
-                        thumbHtml = imgTag; // သာမန် Photo
-                    }
+                    if (f.type === "video") thumbHtml = `<div class="thumb-wrapper">${imgTag}<div class="video-overlay"><i class="fa-solid fa-play"></i></div></div>`;
+                    else thumbHtml = imgTag; 
                 } else {
                     thumbHtml = `<i class="fa-solid ${iconClass} fc-icon"></i>`;
                 }
@@ -914,7 +899,8 @@ async function executeCreateFolder() {
     try {
         let res = await fetch(`${BACKEND_URL}/api/create_folder`, {
             method: "POST", headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ name: userName, folder_name: name })
+            // 💡 parent_id အဖြစ် လက်ရှိ currentFolderId ကို ထည့်ပို့လိုက်ပါသည်
+            body: JSON.stringify({ name: userName, folder_name: name, parent_id: currentFolderId })
         });
         let result = await res.json();
         if(result.success) {
@@ -982,21 +968,35 @@ function renderBreadcrumb() {
     let titles = { 'all': 'My Drive', 'photo': 'Photos', 'video': 'Videos', 'doc': 'Documents', 'link': 'Links' };
     let baseTitle = titles[currentCategory] || 'My Drive';
 
-    // All (My Drive) မဟုတ်ရင် (သို့) Root မှာပဲ ရှိနေရင်
     if (currentCategory !== 'all' || currentFolderId === 'root') {
         container.innerHTML = `<span class="breadcrumb-current">${baseTitle}</span>`;
         return;
     }
 
-    // Folder အထဲရောက်နေရင် အဆင့်ဆင့် ပြပေးမည်
-    let breadcrumbsHtml = `<span class="breadcrumb-item" onclick="navigateToFolder('root')">${baseTitle}</span>`;
-    
-    let currentFolderObj = allFilesData.find(f => f.id.toString() === currentFolderId);
-    if (currentFolderObj) {
-         breadcrumbsHtml += `<i class="fa-solid fa-chevron-right breadcrumb-separator"></i>`;
-         breadcrumbsHtml += `<span class="breadcrumb-current">${currentFolderObj.title}</span>`;
+    // 💡 မိခင် Folder များကို နောက်ကြောင်းပြန်ရှာ၍ အဆင့်ဆင့် စီစဉ်ခြင်း
+    let path = [];
+    let currId = currentFolderId;
+    while (currId !== 'root') {
+        let folderObj = allFilesData.find(f => f.id.toString() === currId.toString() && f.type === 'folder');
+        if (folderObj) {
+            path.unshift(folderObj); // ရှေ့ဆုံးကနေ ဝင်ထည့်သည်
+            currId = folderObj.parent_id || 'root';
+        } else {
+            break;
+        }
     }
-    
+
+    // 💡 HTML ဖန်တီးခြင်း
+    let breadcrumbsHtml = `<span class="breadcrumb-item" onclick="navigateToFolder('root')">${baseTitle}</span>`;
+    path.forEach((folder, index) => {
+        breadcrumbsHtml += `<i class="fa-solid fa-angle-right breadcrumb-separator"></i>`;
+        if (index === path.length - 1) {
+            breadcrumbsHtml += `<span class="breadcrumb-current">${folder.title}</span>`;
+        } else {
+            breadcrumbsHtml += `<span class="breadcrumb-item" onclick="navigateToFolder('${folder.id}')">${folder.title}</span>`;
+        }
+    });
+
     container.innerHTML = breadcrumbsHtml;
 }
 
