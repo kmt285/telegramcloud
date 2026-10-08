@@ -880,6 +880,7 @@ async function executeRename() {
 function openFolder(folderId) {
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     currentFolderId = folderId;
+    renderBreadcrumb();
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
@@ -973,4 +974,36 @@ async function executeMoveFiles() {
         }
     } catch(e) { showToast("Connection Error", "error"); }
     btn.innerHTML = oldHtml; btn.disabled = false;
+}
+
+// 💡 Render Breadcrumb Navigation (My Drive > Folder Name)
+function renderBreadcrumb() {
+    let container = document.getElementById('breadcrumb-container');
+    let titles = { 'all': 'My Drive', 'photo': 'Photos', 'video': 'Videos', 'doc': 'Documents', 'link': 'Links' };
+    let baseTitle = titles[currentCategory] || 'My Drive';
+
+    // All (My Drive) မဟုတ်ရင် (သို့) Root မှာပဲ ရှိနေရင်
+    if (currentCategory !== 'all' || currentFolderId === 'root') {
+        container.innerHTML = `<span class="breadcrumb-current">${baseTitle}</span>`;
+        return;
+    }
+
+    // Folder အထဲရောက်နေရင် အဆင့်ဆင့် ပြပေးမည်
+    let breadcrumbsHtml = `<span class="breadcrumb-item" onclick="navigateToFolder('root')">${baseTitle}</span>`;
+    
+    let currentFolderObj = allFilesData.find(f => f.id.toString() === currentFolderId);
+    if (currentFolderObj) {
+         breadcrumbsHtml += `<i class="fa-solid fa-chevron-right breadcrumb-separator"></i>`;
+         breadcrumbsHtml += `<span class="breadcrumb-current">${currentFolderObj.title}</span>`;
+    }
+    
+    container.innerHTML = breadcrumbsHtml;
+}
+
+// 💡 Breadcrumb မှတစ်ဆင့် Folder အဆင့်ဆင့် ပြန်သွားရန်
+function navigateToFolder(folderId) {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    currentFolderId = folderId;
+    renderBreadcrumb();
+    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
