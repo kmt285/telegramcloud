@@ -329,7 +329,7 @@ function cancelSelection() {
 function renderFilesGrid(files) {
     let html = "";
     
-    // 💡 Current Category က All ဖြစ်နေရင် လက်ရှိ Folder အောက်က File တွေကိုပဲ ပြမည်
+    // Current Category က All ဖြစ်နေရင် လက်ရှိ Folder အောက်က File တွေကိုပဲ ပြမည်
     let displayFiles = files;
     if (currentCategory === 'all') {
         displayFiles = files.filter(f => (f.parent_id || 'root') === currentFolderId);
@@ -338,7 +338,7 @@ function renderFilesGrid(files) {
     if(displayFiles.length === 0 && currentFolderId === 'root') {
         html = "<div class='flex-center' style='grid-column: 1 / -1; color: var(--text-muted);'><i class='fa-brands fa-telegram mb-2' style='font-size:40px;'></i><p>Your drive is empty.</p></div>";
     } else {
-        // 💡 Folder အထဲရောက်နေရင် Back ခလုတ်ကို အရင်ဆုံး ပြပေးမည်
+        // Folder အထဲရောက်နေရင် Back ခလုတ်ကို အရင်ဆုံး ပြပေးမည်
         if (currentCategory === 'all' && currentFolderId !== 'root') {
             html += `
             <div class="file-card" onclick="goBackFolder()">
@@ -349,16 +349,36 @@ function renderFilesGrid(files) {
 
         displayFiles.forEach(f => {
             try {
-                let iconClass = "fa-file-lines doc";
-                if (f.type === "photo") iconClass = "fa-image photo";
+                let iconClass = "fa-file-lines doc"; // Default Icon
+                let fileName = (f.file_name || f.title || "").toLowerCase();
+
+                // 💡 File Extension များကို စစ်ဆေး၍ သက်ဆိုင်ရာ Icon ပြောင်းပေးခြင်း
+                if (f.type === "folder") iconClass = "fa-folder folder";
+                else if (f.type === "photo") iconClass = "fa-image photo";
                 else if (f.type === "video") iconClass = "fa-film video";
                 else if (f.type === "link") iconClass = "fa-link link";
                 else if (f.type === "text") iconClass = "fa-note-sticky text";
-                else if (f.type === "folder") iconClass = "fa-folder folder"; // 💡 Folder icon လာပါပြီ
+                else if (fileName.endsWith(".pdf")) iconClass = "fa-file-pdf pdf";
+                else if (fileName.endsWith(".zip") || fileName.endsWith(".rar") || fileName.endsWith(".7z")) iconClass = "fa-file-zipper zip";
+                else if (fileName.endsWith(".apk")) iconClass = "fa-brands fa-android apk";
+                else if (fileName.match(/\.(mp3|wav|ogg|m4a)\$/)) iconClass = "fa-file-audio audio";
+                else if (fileName.match(/\.(xls|xlsx|csv)\$/)) iconClass = "fa-file-excel excel";
+                else if (fileName.match(/\.(doc|docx)\$/)) iconClass = "fa-file-word word";
                 
-                let thumbHtml = f.thumb_file_id 
-                    ? `<img src="${BACKEND_URL}/api/thumb/${f.thumb_file_id}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`
-                    : `<i class="fa-solid ${iconClass} fc-icon"></i>`;
+                // 💡 Thumbnail ရှိလျှင် ဖော်ပြခြင်း နှင့် Video ဖြစ်လျှင် Play Button Overlay အုပ်ခြင်း
+                let thumbHtml = "";
+                if (f.thumb_file_id) {
+                    let imgTag = `<img src="${BACKEND_URL}/api/thumb/${f.thumb_file_id}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`;
+                    
+                    if (f.type === "video") {
+                        // Video ဆိုလျှင် Play Icon လေး အပေါ်ကနေ ထပ်တင်ပေးမည်
+                        thumbHtml = `<div class="thumb-wrapper">${imgTag}<div class="video-overlay"><i class="fa-solid fa-play"></i></div></div>`;
+                    } else {
+                        thumbHtml = imgTag; // သာမန် Photo
+                    }
+                } else {
+                    thumbHtml = `<i class="fa-solid ${iconClass} fc-icon"></i>`;
+                }
 
                 let displayTitle = f.title ? f.title : "Unknown File";
                 
