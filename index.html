@@ -102,12 +102,14 @@
                 </div>
             </aside>
             <main class="main-content">
+                <!-- 💡 Top Bar: Search, View Toggle, Refresh, Settings သာ ပါမည် -->
                 <header class="topbar">
                     <div class="search-bar"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search in Drive..." onkeyup="searchFiles(this.value)"></div> 
-                    <button class="btn-refresh" onclick="openCreateFolderModal()"><i class="fa-solid fa-folder-plus"></i></button>
-                    <button class="btn-refresh" onclick="fetchCloudData()"><i class="fa-solid fa-rotate-right"></i></button>
-                    <button class="btn-refresh" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
+                    <button class="btn-refresh" id="btn-view-toggle" onclick="toggleView()" title="Change View"><i class="fa-solid fa-list"></i></button>
+                    <button class="btn-refresh" onclick="fetchCloudData()" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
+                    <button class="btn-refresh" onclick="openSettings()" title="Settings"><i class="fa-solid fa-gear"></i></button>
                 </header>
+                
                 <div class="content-area">
                     <!-- 💡 Breadcrumb Navigation (Windows File Explorer ပုံစံ) -->
                     <div id="breadcrumb-container" class="breadcrumb-container">
@@ -141,9 +143,13 @@
                     </div>
                 </div>
 
-                <div class="upload-bar flex-center" id="upload-bar" style="padding: 10px 20px;">
-                    <button onclick="goToBotForUpload()" class="btn-primary w-100 btn-glow" style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                <!-- 💡 Upload & New Folder Bar (Google Drive ပုံစံ တွဲထားသည်) -->
+                <div class="upload-bar flex-center" id="upload-bar" style="padding: 10px 20px; flex-direction: row;">
+                    <button onclick="goToBotForUpload()" class="btn-primary w-100 btn-glow" style="display:flex; align-items:center; justify-content:center; gap:8px; border-radius: 12px;">
                         <i class="fa-solid fa-cloud-arrow-up"></i> Upload File
+                    </button>
+                    <button onclick="openCreateFolderModal()" class="btn-primary btn-glow" style="background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px 20px;" title="New Folder">
+                        <i class="fa-solid fa-folder-plus" style="color: #fbbc04;"></i>
                     </button>
                 </div>
             </main>
