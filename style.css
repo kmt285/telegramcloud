@@ -285,22 +285,22 @@ body.selection-active .file-card.selected .select-indicator {
 }
 .breadcrumb-item {
     cursor: pointer;
-    color: var(--text-main);
+    color: var(--text-muted); /* 💡 မူလအရောင်ကို ခပ်မှိန်မှိန်ထားမည် */
     transition: color 0.2s;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 .breadcrumb-item:hover {
-    color: var(--primary-blue);
+    color: var(--text-main);
 }
 .breadcrumb-separator {
-    color: var(--primary-blue);
-    font-size: 14px;
-    font-weight: bold;
+    color: var(--text-main); /* 💡 > သင်္ကေတကို အနက်ရောင်/Main Color ပြောင်းထားသည် */
+    font-size: 15px;
+    font-weight: 500;
 }
 .breadcrumb-current {
-    color: var(--text-muted);
+    color: var(--text-main); /* 💡 လက်ရှိရောက်နေတဲ့ Folder နာမည်ကို အနက်ရောင် ထားမည် */
     cursor: default;
 }
 
