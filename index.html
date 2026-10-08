@@ -119,17 +119,18 @@
                     </div>
                 </div>
 
+                <!-- 💡 Google Drive Style Selection Bar -->
                 <div id="selection-bar" class="selection-bar hidden">
-                    <span id="selection-count" class="font-bold">0 Selected</span>
-                    <div style="display:flex; gap:8px;">
-                        <!-- 💡 Rename ခလုတ်အသစ် (ဖိုင် ၁ ခုရွေးမှသာ ပေါ်မည်) -->
-                        <button id="btn-rename-action" class="btn-action" style="background:#1a73e8; display:none;" onclick="openRenameModal()"><i class="fa-solid fa-pen"></i> Rename</button>
-                        <button id="btn-move-action" class="btn-action" style="background:#fbbc04; display:none;" onclick="openMoveModal()"><i class="fa-solid fa-folder-tree"></i> Move</button>
-                        
-                        <button class="btn-action btn-success" onclick="shareSelectedFiles()"><i class="fa-solid fa-share-nodes"></i> Share</button>
-                        <button class="btn-action btn-danger" onclick="deleteSelectedFiles()"><i class="fa-solid fa-trash"></i> Delete</button>
-                        <button class="btn-action" onclick="cancelSelection()"><i class="fa-solid fa-xmark"></i></button>
+                    <div class="selection-left">
+                        <button class="btn-icon-only" onclick="cancelSelection()"><i class="fa-solid fa-xmark"></i></button>
+                        <span id="selection-count" class="font-bold" style="font-size: 16px;">0 Selected</span>
                     </div>
+                    <div class="selection-right">
+                        <button class="btn-icon-only" onclick="shareSelectedFiles()" title="Share"><i class="fa-solid fa-share-nodes"></i></button>
+                        <button class="btn-icon-only text-danger" onclick="deleteSelectedFiles()" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                        <button class="btn-icon-only" onclick="openMoreMenu()" title="More Options"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                    </div>
+                </div>
                 </div>
 
                 <div class="upload-bar flex-center" id="upload-bar" style="padding: 10px 20px;">
@@ -281,6 +282,22 @@
                 <button onclick="closeMoveModal()" class="btn-primary w-100" style="background:var(--text-muted); box-shadow:none;">Cancel</button>
                 <button class="btn-primary w-100 btn-glow" style="background:#fbbc04;" onclick="executeMoveFiles()">Move</button>
             </div>
+        </div>
+    </div>
+
+    <!-- 💡 Google Drive Style More Menu (Bottom Sheet) -->
+    <div id="more-menu-overlay" class="bottom-sheet-overlay hidden" onclick="closeMoreMenu()">
+        <div class="bottom-sheet" onclick="event.stopPropagation()">
+            <div class="bottom-sheet-drag"></div>
+            <h4 id="bottom-sheet-title" class="bottom-sheet-title">1 item selected</h4>
+            <ul class="action-list">
+                <li id="action-rename" onclick="closeMoreMenu(); setTimeout(openRenameModal, 300);">
+                    <i class="fa-solid fa-pen"></i> Rename
+                </li>
+                <li id="action-move" onclick="closeMoreMenu(); setTimeout(openMoveModal, 300);">
+                    <i class="fa-solid fa-folder-tree"></i> Move
+                </li>
+            </ul>
         </div>
     </div>
     
