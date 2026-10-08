@@ -103,12 +103,7 @@
             </aside>
             <main class="main-content">
                 <header class="topbar">
-                    <div class="search-bar"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search in Drive..." onkeyup="searchFiles(this.value)"></div>
-                    
-                    <!-- 💡 အသစ်ထည့်သော View နှင့် Sort ခလုတ်များ -->
-                    <button class="btn-refresh" id="btn-view-toggle" onclick="toggleView()"><i class="fa-solid fa-list"></i></button>
-                    <button class="btn-refresh" onclick="openSortMenu()"><i class="fa-solid fa-arrow-down-a-z"></i></button>
-                    
+                    <div class="search-bar"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search in Drive..." onkeyup="searchFiles(this.value)"></div> 
                     <button class="btn-refresh" onclick="openCreateFolderModal()"><i class="fa-solid fa-folder-plus"></i></button>
                     <button class="btn-refresh" onclick="fetchCloudData()"><i class="fa-solid fa-rotate-right"></i></button>
                     <button class="btn-refresh" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
@@ -117,6 +112,12 @@
                     <!-- 💡 Breadcrumb Navigation (Windows File Explorer ပုံစံ) -->
                     <div id="breadcrumb-container" class="breadcrumb-container">
                         <span class="breadcrumb-current">My Drive</span>
+                    </div>
+                    <!-- 💡 Professional Sort Bar -->
+                    <div class="sort-bar" id="sort-bar">
+                        <div class="sort-item" onclick="toggleSort('name')">Name <i class="fa-solid fa-arrow-down"></i></div>
+                        <div class="sort-item" onclick="toggleSort('date')">Date <i class="fa-solid fa-arrow-down"></i></div>
+                        <div class="sort-item" onclick="toggleSort('size')">Size <i class="fa-solid fa-arrow-down"></i></div>
                     </div>
                     <p id="cloud-status" class="sub-text mb-4">Syncing...</p>
                     <div id="cloud-files-grid" class="file-grid"></div>
@@ -304,22 +305,6 @@
                 <li id="action-move" onclick="closeMoreMenu(); setTimeout(openMoveModal, 300);">
                     <i class="fa-solid fa-folder-tree"></i> Move
                 </li>
-            </ul>
-        </div>
-    </div>
-
-    <!-- 💡 Sort By Menu (Bottom Sheet) -->
-    <div id="sort-menu-overlay" class="bottom-sheet-overlay hidden" onclick="closeSortMenu()">
-        <div class="bottom-sheet" onclick="event.stopPropagation()">
-            <div class="bottom-sheet-drag"></div>
-            <h4 class="bottom-sheet-title">Sort By</h4>
-            <ul class="action-list">
-                <li id="sort-opt-date_desc" onclick="applySort('date_desc')"><i class="fa-solid fa-clock"></i> Date (Newest First)</li>
-                <li id="sort-opt-date_asc" onclick="applySort('date_asc')"><i class="fa-regular fa-clock"></i> Date (Oldest First)</li>
-                <li id="sort-opt-name_asc" onclick="applySort('name_asc')"><i class="fa-solid fa-arrow-down-a-z"></i> Name (A-Z)</li>
-                <li id="sort-opt-name_desc" onclick="applySort('name_desc')"><i class="fa-solid fa-arrow-down-z-a"></i> Name (Z-A)</li>
-                <li id="sort-opt-size_desc" onclick="applySort('size_desc')"><i class="fa-solid fa-arrow-down-9-1"></i> Size (Largest)</li>
-                <li id="sort-opt-size_asc" onclick="applySort('size_asc')"><i class="fa-solid fa-arrow-down-1-9"></i> Size (Smallest)</li>
             </ul>
         </div>
     </div>
