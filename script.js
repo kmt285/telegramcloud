@@ -320,50 +320,80 @@ function cancelSelection() {
 }
 
 // =========================================================
-// 💡 SORT & VIEW FUNCTIONS
+// 💡 GOOGLE DRIVE STYLE FAB & SORT LOGIC
 // =========================================================
-function toggleView() {
+
+// 1. Floating Action Button (+) အဖွင့်အပိတ်
+let isFabOpen = false;
+function toggleFabMenu() {
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    isListView = !isListView;
-    localStorage.setItem('cloudViewMode', isListView ? 'list' : 'grid');
-    
-    let toggleBtn = document.getElementById("btn-view-toggle");
-    if(toggleBtn) {
-        let icon = toggleBtn.querySelector("i");
-        if(icon) icon.className = isListView ? "fa-solid fa-border-all" : "fa-solid fa-list";
+    isFabOpen = !isFabOpen;
+    let menu = document.getElementById("fab-menu");
+    let overlay = document.getElementById("fab-overlay");
+    let mainIcon = document.querySelector("#fab-main-btn i");
+
+    if(isFabOpen) {
+        menu.classList.remove("hidden"); overlay.classList.remove("hidden");
+        setTimeout(() => { menu.classList.add("show"); overlay.classList.add("show"); }, 10);
+        mainIcon.classList.replace("fa-plus", "fa-xmark");
+    } else {
+        menu.classList.remove("show"); overlay.classList.remove("show");
+        setTimeout(() => { menu.classList.add("hidden"); overlay.classList.add("hidden"); }, 200);
+        mainIcon.classList.replace("fa-xmark", "fa-plus");
     }
-    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
-// 💡 (FIXED) အကြီးအသေး စနစ်တကျ တွက်ချက်နိုင်အောင် ပြင်ဆင်ထားသည်
-function parseSizeToBytes(sizeStr) {
-    if (!sizeStr) return 0;
-    let val = parseFloat(sizeStr.replace(/[^\d.-]/g, ''));
-    if (isNaN(val)) return 0;
-    if (sizeStr.includes("GB")) return val * 1024 * 1024 * 1024;
-    if (sizeStr.includes("MB")) return val * 1024 * 1024;
-    if (sizeStr.includes("KB")) return val * 1024;
-    return val;
-}
-
+// 2. Sort UI ကို Update လုပ်ခြင်း (Date, Name, Size)
 function updateSortUI() {
-    document.querySelectorAll('.sort-item').forEach(el => {
-        el.classList.remove('active', 'asc', 'desc');
-    });
-    let activeItem = document.querySelector(`.sort-item[onclick="toggleSort('${sortBy}')"]`);
-    if (activeItem) {
-        activeItem.classList.add('active');
-        activeItem.classList.add(sortOrder);
-    }
+    let labels = { 'name': 'Name', 'date': 'Date', 'size': 'Size' };
+    let labelEl = document.getElementById("current-sort-label");
+    let iconEl = document.getElementById("current-sort-icon");
+    
+    if (labelEl) labelEl.innerText = labels[sortBy];
+    if (iconEl) iconEl.className = sortOrder === 'asc' ? "fa-solid fa-arrow-up" : "fa-solid fa-arrow-down";
 }
 
-function toggleSort(column) {
+// 3. Sort Menu Modal ဖွင့်ခြင်း
+function openSortMenu() {
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     
-    if (sortBy === column) sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-    else {
-        sortBy = column;
-        sortOrder = column === 'name' ? 'asc' : 'desc';
+    document.querySelectorAll('.clean-action-list li').forEach(el => {
+        el.classList.remove('active');
+        let i = el.querySelector(".sort-dir-icon");
+        if (i) i.style.opacity = "0"; // မရွေးရသေးသည့် မြှားများကို ဖျောက်ထားမည်
+    });
+    
+    let activeEl = document.getElementById("sort-" + sortBy);
+    if (activeEl) {
+        activeEl.classList.add("active");
+        let i = activeEl.querySelector(".sort-dir-icon");
+        if (i) {
+            i.style.opacity = "1";
+            i.className = sortOrder === 'asc' ? "fa-solid fa-arrow-up sort-dir-icon" : "fa-solid fa-arrow-down sort-dir-icon";
+        }
+    }
+
+    let overlay = document.getElementById("sort-menu-overlay");
+    overlay.classList.remove("hidden");
+    setTimeout(() => { overlay.classList.add("show"); }, 10);
+}
+
+function closeSortMenu() {
+    let overlay = document.getElementById("sort-menu-overlay");
+    overlay.classList.remove("show");
+    setTimeout(() => { overlay.classList.add("hidden"); }, 300);
+}
+
+// 4. Sort လုပ်ဆောင်ချက်
+function applySort(type) {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    
+    // လက်ရှိရွေးထားသော Column ကိုပဲ ထပ်နှိပ်ပါက မြှား (Order) အတက်အကျ ပြောင်းပေးမည်
+    if (sortBy === type) {
+        sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortBy = type;
+        sortOrder = type === 'name' ? 'asc' : 'desc';
     }
     
     localStorage.setItem('cloudSortBy', sortBy);
@@ -371,29 +401,8 @@ function toggleSort(column) {
     
     updateSortUI();
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+    closeSortMenu();
 }
-
-function sortFilesArray(filesArray) {
-    return filesArray.sort((a, b) => {
-        if (a.type === 'folder' && b.type !== 'folder') return -1;
-        if (a.type !== 'folder' && b.type === 'folder') return 1;
-
-        let result = 0;
-        if (sortBy === 'date') {
-            result = (a.timestamp || 0) - (b.timestamp || 0);
-        } else if (sortBy === 'name') {
-            let nameA = (a.title || "").toLowerCase();
-            let nameB = (b.title || "").toLowerCase();
-            result = nameA.localeCompare(nameB);
-        } else if (sortBy === 'size') {
-            let sizeA = parseSizeToBytes(a.size);
-            let sizeB = parseSizeToBytes(b.size);
-            result = sizeA - sizeB;
-        }
-        return sortOrder === 'asc' ? result : -result;
-    });
-}
-
 // =========================================================
 // 💡 MAIN RENDER (GRID & LIST)
 // =========================================================
