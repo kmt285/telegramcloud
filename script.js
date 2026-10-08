@@ -5,7 +5,7 @@ tg.ready();
 let currentCategory = 'all'; 
 let currentFolderId = 'root'; 
 
-// 💡 Professional UI States (Duplicate ပြဿနာ ကင်းရှင်းရေးအတွက် တစ်နေရာတည်းတွင်သာ ကြေညာထားသည်)
+// 💡 Professional UI States
 let sortBy = localStorage.getItem('cloudSortBy') || 'date'; 
 let sortOrder = localStorage.getItem('cloudSortOrder') || 'desc'; 
 let isListView = localStorage.getItem('cloudViewMode') === 'list';
@@ -194,6 +194,8 @@ async function fetchCloudData(isLoadMore = false) {
                 localStorage.setItem(`cloudCounts_${userName}`, JSON.stringify(cloudTotalCounts));
             }
             localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
+            
+            // 💡 Functions များ ပြန်လည် အလုပ်လုပ်စေရန် သေချာခေါ်ထားပါသည်
             renderBreadcrumb();
             updateCategoryStatus();
             updateStorageUI(); 
@@ -217,6 +219,7 @@ async function fetchCloudData(isLoadMore = false) {
             }
         }
     } catch(e) { 
+        console.error("Fetch Error:", e);
         if (!isLoadMore) statusText.innerText = "Connection error."; 
         else showToast("Connection error.", "error");
     }
@@ -322,8 +325,6 @@ function cancelSelection() {
 // =========================================================
 // 💡 GOOGLE DRIVE STYLE FAB & SORT LOGIC
 // =========================================================
-
-// 1. Floating Action Button (+) အဖွင့်အပိတ်
 let isFabOpen = false;
 function toggleFabMenu() {
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
@@ -331,6 +332,8 @@ function toggleFabMenu() {
     let menu = document.getElementById("fab-menu");
     let overlay = document.getElementById("fab-overlay");
     let mainIcon = document.querySelector("#fab-main-btn i");
+
+    if (!menu || !overlay || !mainIcon) return;
 
     if(isFabOpen) {
         menu.classList.remove("hidden"); overlay.classList.remove("hidden");
@@ -343,7 +346,6 @@ function toggleFabMenu() {
     }
 }
 
-// 2. Sort UI ကို Update လုပ်ခြင်း (Date, Name, Size)
 function updateSortUI() {
     let labels = { 'name': 'Name', 'date': 'Date', 'size': 'Size' };
     let labelEl = document.getElementById("current-sort-label");
@@ -351,16 +353,11 @@ function updateSortUI() {
     
     if (labelEl) labelEl.innerText = labels[sortBy];
     if (iconEl) iconEl.className = sortOrder === 'asc' ? "fa-solid fa-arrow-up" : "fa-solid fa-arrow-down";
-}
 
-// 3. Sort Menu Modal ဖွင့်ခြင်း
-function openSortMenu() {
-    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    
     document.querySelectorAll('.clean-action-list li').forEach(el => {
         el.classList.remove('active');
         let i = el.querySelector(".sort-dir-icon");
-        if (i) i.style.opacity = "0"; // မရွေးရသေးသည့် မြှားများကို ဖျောက်ထားမည်
+        if(i) i.style.opacity = "0";
     });
     
     let activeEl = document.getElementById("sort-" + sortBy);
@@ -372,30 +369,34 @@ function openSortMenu() {
             i.className = sortOrder === 'asc' ? "fa-solid fa-arrow-up sort-dir-icon" : "fa-solid fa-arrow-down sort-dir-icon";
         }
     }
+}
 
+function openSortMenu() {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    updateSortUI();
     let overlay = document.getElementById("sort-menu-overlay");
-    overlay.classList.remove("hidden");
-    setTimeout(() => { overlay.classList.add("show"); }, 10);
+    if(overlay) {
+        overlay.classList.remove("hidden");
+        setTimeout(() => { overlay.classList.add("show"); }, 10);
+    }
 }
 
 function closeSortMenu() {
     let overlay = document.getElementById("sort-menu-overlay");
-    overlay.classList.remove("show");
-    setTimeout(() => { overlay.classList.add("hidden"); }, 300);
+    if(overlay) {
+        overlay.classList.remove("show");
+        setTimeout(() => { overlay.classList.add("hidden"); }, 300);
+    }
 }
 
-// 4. Sort လုပ်ဆောင်ချက်
 function applySort(type) {
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    
-    // လက်ရှိရွေးထားသော Column ကိုပဲ ထပ်နှိပ်ပါက မြှား (Order) အတက်အကျ ပြောင်းပေးမည်
     if (sortBy === type) {
         sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
     } else {
         sortBy = type;
         sortOrder = type === 'name' ? 'asc' : 'desc';
     }
-    
     localStorage.setItem('cloudSortBy', sortBy);
     localStorage.setItem('cloudSortOrder', sortOrder);
     
@@ -403,10 +404,63 @@ function applySort(type) {
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
     closeSortMenu();
 }
+
+function toggleSort(column) {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    if (sortBy === column) sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    else { sortBy = column; sortOrder = column === 'name' ? 'asc' : 'desc'; }
+    
+    localStorage.setItem('cloudSortBy', sortBy);
+    localStorage.setItem('cloudSortOrder', sortOrder);
+    
+    updateSortUI();
+    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+}
+
+function toggleView() {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    isListView = !isListView;
+    localStorage.setItem('cloudViewMode', isListView ? 'list' : 'grid');
+    
+    let icon = document.getElementById("btn-view-toggle").querySelector("i");
+    if (icon) icon.className = isListView ? "fa-solid fa-border-all" : "fa-solid fa-list";
+    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+}
+
+function parseSizeToBytes(sizeStr) {
+    if (!sizeStr) return 0;
+    let val = parseFloat(sizeStr.replace(/[^\d.-]/g, ''));
+    if (isNaN(val)) return 0;
+    if (sizeStr.includes("GB")) return val * 1024 * 1024 * 1024;
+    if (sizeStr.includes("MB")) return val * 1024 * 1024;
+    if (sizeStr.includes("KB")) return val * 1024;
+    return val;
+}
+
+function sortFilesArray(filesArray) {
+    return filesArray.sort((a, b) => {
+        if (a.type === 'folder' && b.type !== 'folder') return -1;
+        if (a.type !== 'folder' && b.type === 'folder') return 1;
+
+        let result = 0;
+        if (sortBy === 'date') {
+            result = (a.timestamp || 0) - (b.timestamp || 0);
+        } else if (sortBy === 'name') {
+            let nameA = (a.title || "").toLowerCase();
+            let nameB = (b.title || "").toLowerCase();
+            result = nameA.localeCompare(nameB);
+        } else if (sortBy === 'size') {
+            let sizeA = parseSizeToBytes(a.size);
+            let sizeB = parseSizeToBytes(b.size);
+            result = sizeA - sizeB;
+        }
+        return sortOrder === 'asc' ? result : -result;
+    });
+}
+
 // =========================================================
 // 💡 MAIN RENDER (GRID & LIST)
 // =========================================================
-// 💡 (FIXED) Syntax Error များ ကင်းစင်အောင် ပြင်ဆင်ထားသည်
 function renderFilesGrid(files) {
     let html = "";
     
@@ -533,14 +587,18 @@ function openFolder(folderId) {
 function openCreateFolderModal() {
     document.getElementById("folder-input").value = "";
     let overlay = document.getElementById("folder-alert-overlay");
-    overlay.classList.remove("hidden");
-    setTimeout(() => { overlay.classList.add("show"); document.getElementById("folder-input").focus(); }, 10);
+    if(overlay) {
+        overlay.classList.remove("hidden");
+        setTimeout(() => { overlay.classList.add("show"); document.getElementById("folder-input").focus(); }, 10);
+    }
 }
 
 function closeFolderModal() {
     let overlay = document.getElementById("folder-alert-overlay");
-    overlay.classList.remove("show");
-    setTimeout(() => overlay.classList.add("hidden"), 300);
+    if(overlay) {
+        overlay.classList.remove("show");
+        setTimeout(() => overlay.classList.add("hidden"), 300);
+    }
 }
 
 async function executeCreateFolder() {
@@ -578,14 +636,18 @@ function openMoveModal() {
         }
     });
     let overlay = document.getElementById("move-alert-overlay");
-    overlay.classList.remove("hidden");
-    setTimeout(() => { overlay.classList.add("show"); }, 10);
+    if(overlay) {
+        overlay.classList.remove("hidden");
+        setTimeout(() => { overlay.classList.add("show"); }, 10);
+    }
 }
 
 function closeMoveModal() {
     let overlay = document.getElementById("move-alert-overlay");
-    overlay.classList.remove("show");
-    setTimeout(() => overlay.classList.add("hidden"), 300);
+    if(overlay) {
+        overlay.classList.remove("show");
+        setTimeout(() => overlay.classList.add("hidden"), 300);
+    }
 }
 
 async function executeMoveFiles() {
@@ -694,8 +756,10 @@ async function updateShareLinkQuietly() {
 
 function closeShareAlert() {
     let overlay = document.getElementById("share-alert-overlay");
-    overlay.classList.remove("show");
-    setTimeout(() => { overlay.classList.add("hidden"); cancelSelection(); }, 300);
+    if(overlay) {
+        overlay.classList.remove("show");
+        setTimeout(() => { overlay.classList.add("hidden"); cancelSelection(); }, 300);
+    }
 }
 
 function copyShareLink() {
@@ -733,8 +797,10 @@ function openRenameModal() {
 
 function closeRenameModal() {
     let overlay = document.getElementById("rename-alert-overlay");
-    overlay.classList.remove("show");
-    setTimeout(() => overlay.classList.add("hidden"), 300);
+    if(overlay) {
+        overlay.classList.remove("show");
+        setTimeout(() => overlay.classList.add("hidden"), 300);
+    }
 }
 
 async function executeRename() {
@@ -825,7 +891,8 @@ async function openFile(msgId) {
 
 async function openSettings() {
     tg.HapticFeedback.impactOccurred("light");
-    document.getElementById("settings-modal").classList.remove("hidden");
+    let modal = document.getElementById("settings-modal");
+    if(modal) modal.classList.remove("hidden");
     try {
         let res = await fetch(`${BACKEND_URL}/api/get_recovery_key`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName }) });
         let result = await res.json();
@@ -833,7 +900,10 @@ async function openSettings() {
     } catch(e) { document.getElementById("recovery_key_display").innerText = "Error loading key"; }
 }
 
-function closeSettings() { document.getElementById("settings-modal").classList.add("hidden"); }
+function closeSettings() { 
+    let modal = document.getElementById("settings-modal");
+    if(modal) modal.classList.add("hidden"); 
+}
 
 async function restoreCloud() {
     let keyInput = document.getElementById("restore_key_input").value.trim();
@@ -853,27 +923,47 @@ async function restoreCloud() {
 let alertCloseCallback = null, confirmAlertCallback = null;
 function showAlert(message, title = "Notice", callback = null) {
     alertCloseCallback = callback;
-    document.getElementById("custom-alert-title").innerText = title; document.getElementById("custom-alert-message").innerText = message;
+    let titleEl = document.getElementById("custom-alert-title");
+    let msgEl = document.getElementById("custom-alert-message");
+    if(titleEl) titleEl.innerText = title; 
+    if(msgEl) msgEl.innerText = message;
+    
     let overlay = document.getElementById("custom-alert-overlay");
-    overlay.classList.remove("hidden"); setTimeout(() => { overlay.classList.add("show"); }, 10);
+    if(overlay) {
+        overlay.classList.remove("hidden"); setTimeout(() => { overlay.classList.add("show"); }, 10);
+    }
     if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("warning");
 }
 
 function closeCustomAlert() {
-    let overlay = document.getElementById("custom-alert-overlay"); overlay.classList.remove("show");
-    setTimeout(() => { overlay.classList.add("hidden"); if (alertCloseCallback) { let cb = alertCloseCallback; alertCloseCallback = null; cb(); } }, 300);
+    let overlay = document.getElementById("custom-alert-overlay"); 
+    if(overlay) {
+        overlay.classList.remove("show");
+        setTimeout(() => { overlay.classList.add("hidden"); if (alertCloseCallback) { let cb = alertCloseCallback; alertCloseCallback = null; cb(); } }, 300);
+    }
 }
 
 function showConfirmAlert(message, callback) {
-    confirmAlertCallback = callback; document.getElementById("confirm-alert-message").innerText = message;
-    let overlay = document.getElementById("confirm-alert-overlay"); overlay.classList.remove("hidden");
-    setTimeout(() => overlay.classList.add("show"), 10); if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("warning");
+    confirmAlertCallback = callback; 
+    let msgEl = document.getElementById("confirm-alert-message");
+    if(msgEl) msgEl.innerText = message;
+    
+    let overlay = document.getElementById("confirm-alert-overlay"); 
+    if(overlay) {
+        overlay.classList.remove("hidden");
+        setTimeout(() => overlay.classList.add("show"), 10); 
+    }
+    if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("warning");
 }
 
 function closeConfirmAlert() {
-    let overlay = document.getElementById("confirm-alert-overlay"); overlay.classList.remove("show");
-    setTimeout(() => overlay.classList.add("hidden"), 300);
+    let overlay = document.getElementById("confirm-alert-overlay"); 
+    if(overlay) {
+        overlay.classList.remove("show");
+        setTimeout(() => overlay.classList.add("hidden"), 300);
+    }
 }
+
 function executeConfirmAction() { closeConfirmAlert(); if (confirmAlertCallback) { confirmAlertCallback(); confirmAlertCallback = null; } }
 
 async function loginWithKey() {
