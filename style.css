@@ -167,7 +167,7 @@ body.selection-active .file-card.selected .select-indicator {
 
 /* 💡 Selection Bar & Actions (Z-index မြှင့်ထားသည်) */
 .selection-bar { 
-    position: fixed; bottom: 0; left: 0; right: 0; 
+    position: absolute; bottom: 0; left: 0; right: 0; 
     background: var(--card-bg); padding: 12px 20px; 
     display: flex; justify-content: space-between; align-items: center; 
     border-top: 1px solid var(--border-color); 
@@ -184,7 +184,7 @@ body.selection-active .file-card.selected .select-indicator {
 
 /* 💡 Navigation & Inputs (Z-index မြှင့်ထားသည်) */
 .upload-bar { 
-    position: fixed; bottom: 0; left: 0; right: 0; padding: 15px; 
+    position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; 
     background: var(--bg-color); border-top: 1px solid var(--border-color); 
     display: flex; gap: 10px; z-index: 99; /* 💡 ပြင်ဆင်ချက် */
 }
@@ -234,17 +234,22 @@ body.selection-active .file-card.selected .select-indicator {
 @keyframes popIn { from { bottom: 60px; opacity: 0; } to { bottom: 80px; opacity: 1; } }
 @keyframes fadeOut { to { opacity: 0; bottom: 60px; } }
 
-/* 📱 Mobile Responsive ပိုင်း (အောက်ခြေမှာ အစားထိုးရန်) */
+/* 📱 Mobile Responsive */
 @media (max-width: 768px) {
     .sidebar { display: none !important; }
     .bottom-nav { display: flex; }
-    .upload-bar { bottom: 60px; } 
     .content-area { padding-bottom: 140px; }
     
+    .upload-bar { 
+        position: fixed; /* 💡 Mobile မှာသာ fixed အလုပ်လုပ်ရန် ထည့်ပေးပါ */
+        bottom: 60px; 
+    } 
+    
     .selection-bar { 
+        position: fixed; /* 💡 Mobile မှာသာ fixed အလုပ်လုပ်ရန် ထည့်ပေးပါ */
         bottom: 60px; 
         padding: 10px;
-        flex-direction: column; /* 💡 Mobile မှာ အပေါ်အောက်စီရန် */
+        flex-direction: column; 
         align-items: flex-start;
     }
     
@@ -257,7 +262,6 @@ body.selection-active .file-card.selected .select-indicator {
         gap: 8px;
     }
     
-    /* Scrollbar အသေးလေးကို ရှင်းလင်းအောင် ဖျောက်ထားခြင်း */
     .selection-bar > div::-webkit-scrollbar {
         display: none; 
     }
