@@ -3,6 +3,7 @@ tg.expand();
 tg.ready();
 
 let currentCategory = 'all'; 
+let currentFolderId = 'root'; // 💡 လက်ရှိရောက်နေသော Folder ID
 let cloudTotalCounts = {};
 const BACKEND_URL = "https://telegramcloudbackend.onrender.com";
 
@@ -246,10 +247,16 @@ function enterSelectionMode(id) {
 
 function handleFileClick(id) {
     if (justSelected) return; 
+    let fileObj = allFilesData.find(f => f.id.toString() === id.toString());
+    
     if (isSelectionMode) {
         toggleFileSelect(id); 
     } else {
-        openFile(id); 
+        if (fileObj && fileObj.type === 'folder') {
+            openFolder(id); // 💡 Folder ဆိုရင် Folder ထဲ ဝင်မည်
+        } else {
+            openFile(id); 
+        }
     }
 }
 
@@ -272,6 +279,8 @@ function toggleFileSelect(id) {
         // 💡 ဖိုင် (၁) ခုတည်း ရွေးထားမှသာ Rename ခလုတ်ကို ပြမည်
         let renameBtn = document.getElementById("btn-rename-action");
         if(renameBtn) renameBtn.style.display = selectedFiles.length === 1 ? "flex" : "none";
+        let moveBtn = document.getElementById("btn-move-action");
+    if(moveBtn) moveBtn.style.display = selectedFiles.length > 0 ? "flex" : "none";
         
     } else {
         cancelSelection(); 
@@ -299,44 +308,45 @@ function cancelSelection() {
 // =========================================================
 function renderFilesGrid(files) {
     let html = "";
-    if(files.length === 0) {
+    
+    // 💡 Current Category က All ဖြစ်နေရင် လက်ရှိ Folder အောက်က File တွေကိုပဲ ပြမည်
+    let displayFiles = files;
+    if (currentCategory === 'all') {
+        displayFiles = files.filter(f => (f.parent_id || 'root') === currentFolderId);
+    }
+
+    if(displayFiles.length === 0 && currentFolderId === 'root') {
         html = "<div class='flex-center' style='grid-column: 1 / -1; color: var(--text-muted);'><i class='fa-brands fa-telegram mb-2' style='font-size:40px;'></i><p>Your drive is empty.</p></div>";
     } else {
-        files.forEach(f => {
+        // 💡 Folder အထဲရောက်နေရင် Back ခလုတ်ကို အရင်ဆုံး ပြပေးမည်
+        if (currentCategory === 'all' && currentFolderId !== 'root') {
+            html += `
+            <div class="file-card" onclick="goBackFolder()">
+                <i class="fa-solid fa-arrow-left fc-icon" style="color:var(--text-muted); font-size: 28px; margin: 20px 0;"></i>
+                <div class="fc-title" style="font-weight:bold; color:var(--text-muted);">🔙 Back</div>
+            </div>`;
+        }
+
+        displayFiles.forEach(f => {
             try {
                 let iconClass = "fa-file-lines doc";
-                
-                // 💡 File Extension ကိုစစ်ဆေးရန် file_name ကိုပါ ယူသုံးခြင်း
-                let fileName = (f.file_name || f.title || "").toLowerCase();
-                
                 if (f.type === "photo") iconClass = "fa-image photo";
                 else if (f.type === "video") iconClass = "fa-film video";
                 else if (f.type === "link") iconClass = "fa-link link";
                 else if (f.type === "text") iconClass = "fa-note-sticky text";
-                else if (f.type === "doc") {
-                    if (fileName.endsWith(".pdf")) iconClass = "fa-file-pdf pdf";
-                    else if (fileName.match(/\.(zip|rar|7z|tar)$/)) iconClass = "fa-file-zipper zip";
-                    else if (fileName.endsWith(".apk")) iconClass = "fa-brands fa-android apk";
-                    else if (fileName.match(/\.(mp3|wav|ogg|m4a)$/)) iconClass = "fa-file-audio audio";
-                    else if (fileName.match(/\.(xls|xlsx|csv)$/)) iconClass = "fa-file-excel excel";
-                    else if (fileName.match(/\.(doc|docx)$/)) iconClass = "fa-file-word word";
-                }
+                else if (f.type === "folder") iconClass = "fa-folder folder"; // 💡 Folder icon လာပါပြီ
                 
-                // 💡 Video ဖြစ်ပါက Play Button Overlay ထည့်ပေးခြင်း
-                let videoOverlay = (f.type === "video") ? `<div class="video-overlay"><i class="fa-solid fa-play"></i></div>` : "";
-
                 let thumbHtml = f.thumb_file_id 
-                    ? `<div class="thumb-wrapper"><img src="${BACKEND_URL}/api/thumb/${f.thumb_file_id}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">${videoOverlay}</div>`
+                    ? `<img src="${BACKEND_URL}/api/thumb/${f.thumb_file_id}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`
                     : `<i class="fa-solid ${iconClass} fc-icon"></i>`;
 
-                let safeTitle = f.title ? f.title.replace(/'/g, "\\'").replace(/"/g, "&quot;") : "Unknown File";
                 let displayTitle = f.title ? f.title : "Unknown File";
                 
                 let dateStr = "";
                 if (f.timestamp) {
                     let d = new Date(f.timestamp * 1000);
                     let months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-                    dateStr = `${d.getDate()} ${months[d.getMonth()]}, ${d.getHours()}:${d.getMinutes().toString().padStart(2, '0')}`;
+                    dateStr = `${d.getDate()} ${months[d.getMonth()]}`;
                 }
 
                 let isSelected = selectedFiles.includes(f.id.toString());
@@ -359,7 +369,6 @@ function renderFilesGrid(files) {
     }
     document.getElementById("cloud-files-grid").innerHTML = html;
 }
-
 // =========================================================
 // 💡 3. DELETE & SHARE FUNCTIONS
 // =========================================================
@@ -823,4 +832,105 @@ async function executeRename() {
     } catch(e) { showToast("Connection error.", "error"); }
     
     btn.innerHTML = originalHtml; btn.disabled = false;
+}
+
+// =========================================================
+// 💡 FOLDER & MOVE FUNCTIONS (NEW)
+// =========================================================
+function openFolder(folderId) {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    currentFolderId = folderId;
+    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+}
+
+function goBackFolder() {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    currentFolderId = 'root'; // 💡 လက်ရှိမှာ 1 Level Folder သာ အသုံးပြုထားပါသည်
+    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+}
+
+function openCreateFolderModal() {
+    document.getElementById("folder-input").value = "";
+    let overlay = document.getElementById("folder-alert-overlay");
+    overlay.classList.remove("hidden");
+    setTimeout(() => { overlay.classList.add("show"); document.getElementById("folder-input").focus(); }, 10);
+}
+
+function closeFolderModal() {
+    let overlay = document.getElementById("folder-alert-overlay");
+    overlay.classList.remove("show");
+    setTimeout(() => overlay.classList.add("hidden"), 300);
+}
+
+async function executeCreateFolder() {
+    let name = document.getElementById("folder-input").value.trim();
+    if (!name) return showToast("ဖိုင်တွဲအမည် ရိုက်ထည့်ပါ။", "error");
+    
+    let btn = event.target.closest('button');
+    let oldHtml = btn.innerHTML;
+    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true;
+
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/create_folder`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, folder_name: name })
+        });
+        let result = await res.json();
+        if(result.success) {
+            allFilesData.unshift(result.folder);
+            localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
+            closeFolderModal();
+            renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+            showToast("<i class='fa-solid fa-check mr-2'></i> Folder ဆောက်ပြီးပါပြီ", "success");
+        }
+    } catch(e) { showToast("Connection Error", "error"); }
+    btn.innerHTML = oldHtml; btn.disabled = false;
+}
+
+function openMoveModal() {
+    if(selectedFiles.length === 0) return;
+    let select = document.getElementById("move-folder-select");
+    select.innerHTML = '<option value="root">My Drive (Root)</option>';
+    
+    // 💡 ဆောက်ထားသော Folder များကို Select Option အဖြစ် ဆွဲထုတ်ခြင်း
+    allFilesData.forEach(f => {
+        if(f.type === 'folder' && !selectedFiles.includes(f.id.toString())) {
+            select.innerHTML += `<option value="${f.id}">📁 ${f.title}</option>`;
+        }
+    });
+
+    let overlay = document.getElementById("move-alert-overlay");
+    overlay.classList.remove("hidden");
+    setTimeout(() => { overlay.classList.add("show"); }, 10);
+}
+
+function closeMoveModal() {
+    let overlay = document.getElementById("move-alert-overlay");
+    overlay.classList.remove("show");
+    setTimeout(() => overlay.classList.add("hidden"), 300);
+}
+
+async function executeMoveFiles() {
+    let targetId = document.getElementById("move-folder-select").value;
+    let btn = event.target.closest('button');
+    let oldHtml = btn.innerHTML;
+    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true;
+
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/move_files`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, msg_ids: selectedFiles, target_id: targetId })
+        });
+        let result = await res.json();
+        if(result.success) {
+            allFilesData.forEach(f => {
+                if (selectedFiles.includes(f.id.toString())) f.parent_id = targetId;
+            });
+            localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
+            closeMoveModal();
+            cancelSelection();
+            showToast("<i class='fa-solid fa-check mr-2'></i> ဖိုင်များကို ရွှေ့လိုက်ပါပြီ", "success");
+        }
+    } catch(e) { showToast("Connection Error", "error"); }
+    btn.innerHTML = oldHtml; btn.disabled = false;
 }
