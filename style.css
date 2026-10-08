@@ -84,7 +84,6 @@ input[type="number"] { -moz-appearance: textfield; }
 .fc-title { font-size: 13px; font-weight: 500; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fc-meta { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
 
-
 /* 💡 Document File Types Specific Colors */
 .fc-icon.pdf { color: #ea4335; } /* Red for PDF */
 .fc-icon.zip { color: #fbbc04; } /* Yellow for ZIP */
@@ -103,7 +102,7 @@ input[type="number"] { -moz-appearance: textfield; }
 
 .video-overlay {
     position: absolute;
-    top: calc(50% - 3px); /* အနည်းငယ် အပေါ်သို့ ရွှေ့ထားသည် */
+    top: calc(50% - 3px);
     left: 50%;
     transform: translate(-50%, -50%);
     width: 34px;
@@ -115,8 +114,8 @@ input[type="number"] { -moz-appearance: textfield; }
     align-items: center;
     justify-content: center;
     font-size: 14px;
-    padding-left: 2px; /* Play icon အလယ်တည့်စေရန် */
-    pointer-events: none; /* Click နှိပ်၍ရရန် */
+    padding-left: 2px;
+    pointer-events: none;
     backdrop-filter: blur(2px);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
@@ -153,7 +152,7 @@ body.selection-active .file-card.selected {
     background: rgba(255, 255, 255, 0.85); color: transparent; 
     align-items: center; justify-content: center; 
     border: 2px solid rgba(0, 0, 0, 0.15); 
-    z-index: 2; /* 💡 ပြင်ဆင်ချက် */
+    z-index: 2; 
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
     font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     display: none; pointer-events: none;
@@ -166,28 +165,67 @@ body.selection-active .file-card.selected .select-indicator {
     box-shadow: 0 3px 8px rgba(26, 115, 232, 0.4);
 }
 
-/* 💡 Selection Bar & Actions (Z-index မြှင့်ထားသည်) */
+/* 💡 Google Drive Style Selection Bar */
 .selection-bar { 
-    position: absolute; bottom: 0; left: 0; right: 0; 
-    background: var(--card-bg); padding: 12px 20px; 
+    position: absolute; 
+    bottom: 0; left: 0; right: 0; 
+    background: var(--card-bg); padding: 8px 15px; 
     display: flex; justify-content: space-between; align-items: center; 
     border-top: 1px solid var(--border-color); 
-    z-index: 100; /* 💡 ပြင်ဆင်ချက် */
-    box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
-    flex-wrap: wrap; /* 💡 နေရာမလောက်ရင် အောက်ဆင်းသွားအောင် */
-    gap: 10px;
+    z-index: 101; 
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.08); 
 }
-.font-bold { font-weight: 600; font-size: 14px; color: var(--primary-blue); }
-.btn-action { padding: 8px 14px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; color: white; background: var(--text-muted); font-size: 13px; display:flex; align-items:center; gap:6px;}
-.btn-danger { background: #ea4335 !important; box-shadow: 0 4px 10px rgba(234, 67, 53, 0.2); }
-.btn-success { background: #0f9d58 !important; box-shadow: 0 4px 10px rgba(15, 157, 88, 0.2); }
-.btn-action:active { transform: scale(0.95); }
+.selection-left, .selection-right { display: flex; align-items: center; gap: 5px; }
+.selection-left { gap: 15px; }
+
+.btn-icon-only {
+    background: transparent; border: none;
+    color: var(--text-main); font-size: 18px;
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.2s;
+}
+.btn-icon-only:active { background: rgba(128,128,128,0.15); }
+.btn-icon-only.text-danger { color: #ea4335; }
+.font-bold { font-weight: 600; color: var(--primary-blue); }
+
+/* 💡 Google Drive Style Bottom Sheet */
+.bottom-sheet-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4); z-index: 99999;
+    opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+}
+.bottom-sheet-overlay.show { opacity: 1; pointer-events: auto; }
+.bottom-sheet {
+    position: absolute; bottom: -100%; left: 0; right: 0; margin: 0 auto; 
+    width: 100%; max-width: 500px; 
+    background: var(--bg-color); border-radius: 20px 20px 0 0;
+    padding: 10px 0 20px; transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1);
+    box-shadow: 0 -10px 25px rgba(0,0,0,0.15);
+}
+.bottom-sheet-overlay.show .bottom-sheet { bottom: 0; }
+.bottom-sheet-drag {
+    width: 40px; height: 4px; background: var(--text-muted);
+    border-radius: 2px; margin: 0 auto 15px; opacity: 0.3;
+}
+.bottom-sheet-title {
+    padding: 0 20px 15px; border-bottom: 1px solid var(--border-color);
+    font-size: 14px; color: var(--text-muted); font-weight: 500;
+}
+.action-list { list-style: none; padding: 5px 0 0; margin: 0; }
+.action-list li {
+    padding: 15px 20px; display: flex; align-items: center; gap: 18px;
+    font-size: 16px; color: var(--text-main); cursor: pointer;
+    transition: background 0.2s; font-weight: 500;
+}
+.action-list li:active { background: rgba(128,128,128,0.1); }
+.action-list li i { font-size: 18px; color: var(--text-muted); width: 24px; text-align: center; }
 
 /* 💡 Navigation & Inputs (Z-index မြှင့်ထားသည်) */
 .upload-bar { 
     position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; 
     background: var(--bg-color); border-top: 1px solid var(--border-color); 
-    display: flex; gap: 10px; z-index: 99; /* 💡 ပြင်ဆင်ချက် */
+    display: flex; gap: 10px; z-index: 99; 
 }
 .input-box-alt { flex: 1; background: var(--card-bg); border: none; border-radius: 20px; padding: 12px 20px; color: var(--text-main); outline: none; }
 .btn-upload { background: var(--primary-blue); border: none; color: white; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 16px; }
@@ -195,7 +233,7 @@ body.selection-active .file-card.selected .select-indicator {
 .bottom-nav { 
     display: none; position: fixed; bottom: 0; left: 0; right: 0; 
     background: var(--bg-color); border-top: 1px solid var(--border-color); 
-    justify-content: space-around; padding: 10px 0; z-index: 98; /* 💡 ပြင်ဆင်ချက် */
+    justify-content: space-around; padding: 10px 0; z-index: 98; 
 }
 .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 11px; cursor: pointer; gap: 4px; }
 .nav-item.active { color: var(--primary-blue); }
@@ -242,29 +280,13 @@ body.selection-active .file-card.selected .select-indicator {
     .content-area { padding-bottom: 140px; }
     
     .upload-bar { 
-        position: fixed; /* 💡 Mobile မှာသာ fixed အလုပ်လုပ်ရန် ထည့်ပေးပါ */
+        position: fixed; 
         bottom: 60px; 
     } 
     
     .selection-bar { 
-        position: fixed; /* 💡 Mobile မှာသာ fixed အလုပ်လုပ်ရန် ထည့်ပေးပါ */
+        position: fixed; /* 💡 Mobile မှာ Selection Bar က နေရာအတိအကျ ဝင်သွားမည် */
         bottom: 60px; 
-        padding: 10px;
-        flex-direction: column; 
-        align-items: flex-start;
-    }
-    
-    /* Button များကို ဘေးတိုက် Scroll ဆွဲလို့ရအောင် ပြုလုပ်ခြင်း */
-    .selection-bar > div {
-        width: 100%;
-        overflow-x: auto; 
-        padding-bottom: 5px;
-        display: flex;
-        gap: 8px;
-    }
-    
-    .selection-bar > div::-webkit-scrollbar {
-        display: none; 
     }
 }
 
