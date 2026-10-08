@@ -74,6 +74,7 @@ input[type="number"] { -moz-appearance: textfield; }
 /* 💡 Grid View & Thumbnails */
 .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
 .fc-icon { font-size: 40px; margin: 15px 0; }
+.fc-icon.folder { color: #fbbc04; }
 .fc-icon.photo { color: #ea4335; } 
 .fc-icon.doc { color: #4285f4; } 
 .fc-icon.text { color: #fbbc04; }
