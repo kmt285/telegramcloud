@@ -304,6 +304,27 @@ body.selection-active .file-card.selected .select-indicator {
     cursor: default;
 }
 
+/* 💡 List View Toggle Styles (စာရင်းပုံစံ အစုန်အဆန်) */
+.file-grid.list-view { display: flex; flex-direction: column; gap: 8px; }
+.file-grid.list-view .file-card { 
+    flex-direction: row; 
+    align-items: center; 
+    padding: 10px 15px; 
+    text-align: left; 
+    min-height: 65px;
+}
+.file-grid.list-view .fc-thumb { width: 45px; height: 45px; margin-bottom: 0; margin-right: 15px; border-radius: 6px; }
+.file-grid.list-view .thumb-wrapper { width: auto; margin-bottom: 0; margin-right: 15px; }
+.file-grid.list-view .thumb-wrapper .fc-thumb { margin-right: 0; }
+.file-grid.list-view .video-overlay { width: 20px; height: 20px; font-size: 8px; }
+.file-grid.list-view .fc-icon { font-size: 30px; margin: 0 15px 0 5px; width: 35px; text-align: center; }
+.file-grid.list-view .fc-title { flex: 1; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.file-grid.list-view .fc-meta { margin-top: 0; margin-left: 10px; font-size: 12px; white-space: nowrap; text-align: right;}
+
+/* 💡 List View အတွက် Selection Mode Animation (Check mark ပေါ်လာချိန် ညာဘက်သို့ရွှေ့ပေးခြင်း) */
+body.selection-active .file-grid.list-view .file-card { padding-left: 45px; transition: padding 0.2s; }
+.file-grid.list-view .select-indicator { top: 50%; transform: translateY(-50%); left: 12px; width: 20px; height: 20px; font-size: 10px; }
+
 /* 📱 Mobile Responsive */
 @media (max-width: 768px) {
     /* 💡 Screen ထက်ကျော်လွန်ပြီး ဘေးသို့ကန်ထွက်ခြင်းကို တားဆီးရန် */
