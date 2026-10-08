@@ -3,18 +3,22 @@ tg.expand();
 tg.ready();
 
 let currentCategory = 'all'; 
-let currentFolderId = 'root'; // 💡 လက်ရှိရောက်နေသော Folder ID
-let currentSortMode = localStorage.getItem('cloudSortMode') || 'date_desc';
+let currentFolderId = 'root'; 
+
+// 💡 Professional UI States (Duplicate ပြဿနာ ကင်းရှင်းရေးအတွက် တစ်နေရာတည်းတွင်သာ ကြေညာထားသည်)
+let sortBy = localStorage.getItem('cloudSortBy') || 'date'; 
+let sortOrder = localStorage.getItem('cloudSortOrder') || 'desc'; 
 let isListView = localStorage.getItem('cloudViewMode') === 'list';
+
 let cloudTotalCounts = {};
-const BACKEND_URL = "https://telegramcloudbackend.onrender.com";
+const BACKEND_URL = "https://telegramcloudbackend.onrender.com"; 
 
 let phoneHash = "", userPhone = "", pollingInterval, allFilesData = [];
 let tgUser = tg.initDataUnsafe?.user;
 
 let userName = tgUser && tgUser.id ? tgUser.id.toString() : (localStorage.getItem("temp_uid") || "Web_Cloud_User_" + Math.floor(Math.random() * 1000000));
+let botUsername = "";
 
-// 💡 အသစ် - ရွေးချယ်ထားသော ဖိုင်များ မှတ်ရန် (Long Press / Right Click UX)
 let isSelectionMode = false;
 let selectedFiles = [];
 let pressTimer;
@@ -41,9 +45,6 @@ function setDisplayUsername() {
     brandEl.innerHTML = `<i class="fa-brands fa-telegram text-blue"></i> ${displayName}`;
 }
 
-// 💡 Bot Username ကို မှတ်ထားရန် Global Variable အသစ်
-let botUsername = "";
-
 window.onload = async () => {
     switchStep("step-loading");
     let cached = localStorage.getItem(`cloudData_${userName}`);
@@ -57,13 +58,21 @@ window.onload = async () => {
         });
         let result = await res.json();
         
-        // 💡 Backend မှ ပို့ပေးသော Bot Username ကို မှတ်ထားမည်
         if(result.bot_username) botUsername = result.bot_username;
         
         if(result.exists) { switchStep("step-success"); fetchCloudData(); } 
         else { switchStep("step-phone"); }
     } catch(e) { switchStep("step-phone"); }
 };
+
+window.addEventListener('DOMContentLoaded', () => {
+    let toggleBtn = document.getElementById("btn-view-toggle");
+    if(toggleBtn) {
+        let icon = toggleBtn.querySelector("i");
+        if(icon) icon.className = isListView ? "fa-solid fa-border-all" : "fa-solid fa-list";
+    }
+    updateSortUI();
+});
 
 function toggleManualLogin() {
     let area = document.getElementById("desktop-input-area");
@@ -220,7 +229,7 @@ async function fetchCloudData(isLoadMore = false) {
 function loadMoreFiles() { fetchCloudData(true); }
 
 // =========================================================
-// 💡 1. LONG PRESS / RIGHT-CLICK UX (Selection System)
+// 💡 SELECTION UX
 // =========================================================
 function handleTouchStart(e, id) {
     pressTimer = setTimeout(() => {
@@ -231,11 +240,7 @@ function handleTouchStart(e, id) {
 
 function handleTouchEnd() { clearTimeout(pressTimer); }
 function handleTouchMove() { clearTimeout(pressTimer); } 
-
-function handleRightClick(e, id) {
-    e.preventDefault(); 
-    enterSelectionMode(id);
-}
+function handleRightClick(e, id) { e.preventDefault(); enterSelectionMode(id); }
 
 function enterSelectionMode(id) {
     if (!isSelectionMode) {
@@ -254,11 +259,8 @@ function handleFileClick(id) {
     if (isSelectionMode) {
         toggleFileSelect(id); 
     } else {
-        if (fileObj && fileObj.type === 'folder') {
-            openFolder(id); // 💡 Folder ဆိုရင် Folder ထဲ ဝင်မည်
-        } else {
-            openFile(id); 
-        }
+        if (fileObj && fileObj.type === 'folder') openFolder(id);
+        else openFile(id); 
     }
 }
 
@@ -280,40 +282,32 @@ function toggleFileSelect(id) {
     } else {
         cancelSelection(); 
     }
-    
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
-// 💡 Google Drive Style More Menu
 function openMoreMenu() {
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     let overlay = document.getElementById("more-menu-overlay");
     let title = document.getElementById("bottom-sheet-title");
     let renameBtn = document.getElementById("action-rename");
     
-    // File အရေအတွက် ပြပေးခြင်း
-    title.innerText = `${selectedFiles.length} item${selectedFiles.length > 1 ? 's' : ''} selected`;
+    if (title) title.innerText = `${selectedFiles.length} item${selectedFiles.length > 1 ? 's' : ''} selected`;
+    if (renameBtn) renameBtn.style.display = selectedFiles.length === 1 ? "flex" : "none";
     
-    // ဖိုင် (၁) ခုတည်း ရွေးထားမှသာ Rename ခလုတ်ကို ပြမည်
-    if (selectedFiles.length === 1) {
-        renameBtn.style.display = "flex";
-    } else {
-        renameBtn.style.display = "none";
+    if(overlay) {
+        overlay.classList.remove("hidden");
+        setTimeout(() => { overlay.classList.add("show"); }, 10);
     }
-    
-    overlay.classList.remove("hidden");
-    setTimeout(() => { overlay.classList.add("show"); }, 10);
 }
 
 function closeMoreMenu() {
     let overlay = document.getElementById("more-menu-overlay");
-    overlay.classList.remove("show");
-    setTimeout(() => { overlay.classList.add("hidden"); }, 300);
+    if(overlay) {
+        overlay.classList.remove("show");
+        setTimeout(() => { overlay.classList.add("hidden"); }, 300);
+    }
 }
 
-let previouslySelectedFiles = [];
-
-// 💡 FIX: Cancel လုပ်သည့်အခါ မူလအခြေအနေသို့ ပြန်လည်ရောက်ရှိစေရန် အပြည့်အစုံ ရေးသားထားသည်
 function cancelSelection() {
     selectedFiles = [];
     isSelectionMode = false;
@@ -326,8 +320,84 @@ function cancelSelection() {
 }
 
 // =========================================================
-// 💡 2. RENDER GRID (UI)
+// 💡 SORT & VIEW FUNCTIONS
 // =========================================================
+function toggleView() {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    isListView = !isListView;
+    localStorage.setItem('cloudViewMode', isListView ? 'list' : 'grid');
+    
+    let toggleBtn = document.getElementById("btn-view-toggle");
+    if(toggleBtn) {
+        let icon = toggleBtn.querySelector("i");
+        if(icon) icon.className = isListView ? "fa-solid fa-border-all" : "fa-solid fa-list";
+    }
+    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+}
+
+// 💡 (FIXED) အကြီးအသေး စနစ်တကျ တွက်ချက်နိုင်အောင် ပြင်ဆင်ထားသည်
+function parseSizeToBytes(sizeStr) {
+    if (!sizeStr) return 0;
+    let val = parseFloat(sizeStr.replace(/[^\d.-]/g, ''));
+    if (isNaN(val)) return 0;
+    if (sizeStr.includes("GB")) return val * 1024 * 1024 * 1024;
+    if (sizeStr.includes("MB")) return val * 1024 * 1024;
+    if (sizeStr.includes("KB")) return val * 1024;
+    return val;
+}
+
+function updateSortUI() {
+    document.querySelectorAll('.sort-item').forEach(el => {
+        el.classList.remove('active', 'asc', 'desc');
+    });
+    let activeItem = document.querySelector(`.sort-item[onclick="toggleSort('${sortBy}')"]`);
+    if (activeItem) {
+        activeItem.classList.add('active');
+        activeItem.classList.add(sortOrder);
+    }
+}
+
+function toggleSort(column) {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    
+    if (sortBy === column) sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    else {
+        sortBy = column;
+        sortOrder = column === 'name' ? 'asc' : 'desc';
+    }
+    
+    localStorage.setItem('cloudSortBy', sortBy);
+    localStorage.setItem('cloudSortOrder', sortOrder);
+    
+    updateSortUI();
+    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+}
+
+function sortFilesArray(filesArray) {
+    return filesArray.sort((a, b) => {
+        if (a.type === 'folder' && b.type !== 'folder') return -1;
+        if (a.type !== 'folder' && b.type === 'folder') return 1;
+
+        let result = 0;
+        if (sortBy === 'date') {
+            result = (a.timestamp || 0) - (b.timestamp || 0);
+        } else if (sortBy === 'name') {
+            let nameA = (a.title || "").toLowerCase();
+            let nameB = (b.title || "").toLowerCase();
+            result = nameA.localeCompare(nameB);
+        } else if (sortBy === 'size') {
+            let sizeA = parseSizeToBytes(a.size);
+            let sizeB = parseSizeToBytes(b.size);
+            result = sizeA - sizeB;
+        }
+        return sortOrder === 'asc' ? result : -result;
+    });
+}
+
+// =========================================================
+// 💡 MAIN RENDER (GRID & LIST)
+// =========================================================
+// 💡 (FIXED) Syntax Error များ ကင်းစင်အောင် ပြင်ဆင်ထားသည်
 function renderFilesGrid(files) {
     let html = "";
     
@@ -339,6 +409,8 @@ function renderFilesGrid(files) {
     displayFiles = sortFilesArray(displayFiles);
 
     let gridContainer = document.getElementById("cloud-files-grid");
+    if (!gridContainer) return;
+    
     if (isListView) gridContainer.classList.add("list-view");
     else gridContainer.classList.remove("list-view");
 
@@ -356,9 +428,8 @@ function renderFilesGrid(files) {
                 else if (f.type === "link") iconClass = "fa-link link";
                 else if (f.type === "text") iconClass = "fa-note-sticky text";
                 else if (fileName.endsWith(".pdf")) iconClass = "fa-file-pdf pdf";
-                else if (fileName.endsWith(".zip") || fileName.endsWith(".rar") || fileName.endsWith(".7z")) iconClass = "fa-file-zipper zip";
+                else if (fileName.match(/\.(zip|rar|7z)\$/)) iconClass = "fa-file-zipper zip";
                 else if (fileName.endsWith(".apk")) iconClass = "fa-brands fa-android apk";
-                /* 💡 ဤနေရာတွင် \ ဖယ်ရှား၍ Error ရှင်းလင်းထားပါသည် */
                 else if (fileName.match(/\.(mp3|wav|ogg|m4a)\$/)) iconClass = "fa-file-audio audio";
                 else if (fileName.match(/\.(xls|xlsx|csv)\$/)) iconClass = "fa-file-excel excel";
                 else if (fileName.match(/\.(doc|docx)\$/)) iconClass = "fa-file-word word";
@@ -401,490 +472,52 @@ function renderFilesGrid(files) {
     }
     gridContainer.innerHTML = html;
 }
-// =========================================================
-// 💡 3. DELETE & SHARE FUNCTIONS
-// =========================================================
-async function deleteSelectedFiles() {
-    if(selectedFiles.length === 0) return;
-    
-    showConfirmAlert(`ရွေးချယ်ထားသော ဖိုင်များကို ဖျက်ပစ်ရန် သေချာပါသလား?\n\n(Folder ကိုဖျက်ပါက အတွင်းရှိဖိုင်များပါ အပြီးတိုင် ပျက်သွားပါမည်)`, async () => {
-        showToast("<i class='fa-solid fa-spinner fa-spin mr-2'></i> Deleting...", "normal");
-        try {
-            let res = await fetch(`${BACKEND_URL}/api/delete_files`, {
-                method: "POST", headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({ name: userName, msg_ids: selectedFiles })
-            });
-            let result = await res.json();
-            
-            if(result.success) {
-                if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-                showToast(`<i class='fa-solid fa-check mr-2'></i> ဖိုင်များကို အပြီးတိုင် ဖျက်ပစ်လိုက်ပါပြီ။`, "success");
-                
-                // 💡 UI ဘက်တွင် ရွေးထားသော ဖိုင်များသာမက၊ ၎င်း Folder အောက်ရှိ ဖိုင်များကိုပါ Local ထဲမှ ရှင်းလင်းခြင်း
-                allFilesData = allFilesData.filter(f => !selectedFiles.includes(f.id.toString()) && !selectedFiles.includes(f.parent_id));
-                localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
-                
-                cancelSelection(); 
-                fetchCloudData(); // 💡 Storage MB များနှင့် Tab များကို မှန်ကန်စေရန် Server မှ ပြန်ခေါ်မည်
-            } else { 
-                showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to delete."), "error"); 
-            }
-        } catch(e) { 
-            showToast("Connection error.", "error");
-            cancelSelection();
-            fetchCloudData();
-        }
-    });
-}
-
-let currentBaseShareLink = ""; 
-let isRestrictMode = false;
-
-async function shareSelectedFiles() {
-    if(selectedFiles.length === 0) return;
-    let btn = event.target.closest('button');
-    let originalHtml = btn.innerHTML;
-    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true;
-    
-    try {
-        let res = await fetch(`${BACKEND_URL}/api/share_files`, {
-            method: "POST", headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ name: userName, msg_ids: selectedFiles, is_restricted: isRestrictMode }) 
-        });
-        let result = await res.json();
-        if(result.success) {
-            tg.HapticFeedback.notificationOccurred("success");
-            
-            currentBaseShareLink = result.link; 
-            document.getElementById("share-link-input").value = currentBaseShareLink;
-            
-            document.getElementById("share-alert-overlay").classList.remove("hidden");
-            setTimeout(() => document.getElementById("share-alert-overlay").classList.add("show"), 10);
-            
-            // 💡 ဤနေရာမှ cancelSelection() ကို ဖြုတ်လိုက်ပါပြီ။ (Popup မပိတ်မချင်း ရွေးထားသည်များ မပျောက်တော့ပါ)
-        } else {
-            showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to share."), "error");
-        }
-    } catch(e) { showToast("Connection error.", "error"); }
-    btn.innerHTML = originalHtml; btn.disabled = false;
-}
-
-function toggleRestrictMode() {
-    isRestrictMode = !isRestrictMode;
-    let icon = document.getElementById("restrict-icon");
-    let wrapper = document.querySelector(".restrict-toggle-wrapper");
-    
-    if(isRestrictMode) {
-        icon.className = "fa-solid fa-lock";
-        wrapper.classList.add("active");
-        if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    } else {
-        icon.className = "fa-solid fa-lock-open";
-        wrapper.classList.remove("active");
-        if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    }
-    
-    updateShareLinkQuietly();
-}
-
-async function updateShareLinkQuietly() {
-    let input = document.getElementById("share-link-input");
-    input.value = "Updating link...";
-    try {
-        // 💡 ရွေးချယ်ထားဆဲဖြစ်သော selectedFiles ကိုသာ အသုံးပြုမည်
-        let res = await fetch(`${BACKEND_URL}/api/share_files`, {
-            method: "POST", headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ name: userName, msg_ids: selectedFiles, is_restricted: isRestrictMode }) 
-        });
-        let result = await res.json();
-        if(result.success) {
-            currentBaseShareLink = result.link;
-            input.value = currentBaseShareLink;
-        }
-    } catch(e) {
-        input.value = "Error updating link";
-    }
-}
-
-function closeShareAlert() {
-    let overlay = document.getElementById("share-alert-overlay");
-    overlay.classList.remove("show");
-    setTimeout(() => {
-        overlay.classList.add("hidden");
-        cancelSelection(); // 💡 Popup အလွှာ ပိတ်သွားချိန်မှသာ Selection အမှတ်အသားများကို ဖြုတ်ပါမည်
-    }, 300);
-}
-
-// 💡 FIX: Copy Link အလုပ်လုပ်စေရန် (Mobile/iOS Support အပါအဝင်)
-function copyShareLink() {
-    let keyInput = document.getElementById("share-link-input");
-    let keyText = keyInput.value;
-    
-    if (keyText) {
-        const showSuccess = () => {
-            showToast("<i class='fa-solid fa-check mr-2'></i> Link Copied to Clipboard!", "success");
-            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-            closeShareAlert(); 
-        };
-
-        const fallbackCopy = () => {
-            let textArea = document.createElement("textarea");
-            textArea.value = keyText;
-            textArea.setAttribute('readonly', '');
-            textArea.style.position = "fixed"; 
-            textArea.style.left = "-99999px";
-            textArea.style.top = "-99999px";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                if (document.execCommand('copy')) showSuccess();
-                else showToast("Failed to copy link.", "error");
-            } catch (err) { showToast("Failed to copy link.", "error"); }
-            document.body.removeChild(textArea);
-        };
-
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(keyText).then(showSuccess).catch(err => fallbackCopy());
-        } else {
-            fallbackCopy();
-        }
-    }
-}
 
 // =========================================================
-// 💡 4. OTHER FUNCTIONS
+// 💡 FOLDER FUNCTIONS
 // =========================================================
-function filterFiles(type, element) {
-    currentCategory = type;
-    document.querySelectorAll('.nav-links li, .nav-item').forEach(el => el.classList.remove('active'));
-    if(element) element.classList.add('active');
+function renderBreadcrumb() {
+    let container = document.getElementById('breadcrumb-container');
+    if (!container) return;
     
     let titles = { 'all': 'My Drive', 'photo': 'Photos', 'video': 'Videos', 'doc': 'Documents', 'link': 'Links' };
-    renderBreadcrumb();
-    
-    updateCategoryStatus();
-    renderFilesGrid(type === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
-}
+    let baseTitle = titles[currentCategory] || 'My Drive';
 
-function updateCategoryStatus() {
-    let statusText = document.getElementById("cloud-status");
-    let filtered = currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory);
-    let currentLoaded = filtered.length;
-    let total = cloudTotalCounts[currentCategory] !== undefined ? cloudTotalCounts[currentCategory] : currentLoaded;
-    
-    if (total === 0 && currentLoaded === 0) statusText.innerText = "0 items";
-    else statusText.innerText = `${currentLoaded} items synced | total ${total} items`;
-}
-
-function searchFiles(query) {
-    let lowerQ = query.toLowerCase();
-    renderFilesGrid(allFilesData.filter(f => f.title.toLowerCase().includes(lowerQ)));
-}
-
-// 💡 Upload Button နှိပ်လျှင် Bot Chat ဆီသို့ လင့်ခ်ဖြင့် တိုက်ရိုက်သွားရန်
-function goToBotForUpload() {
-    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("medium");
-    
-    let botLink = botUsername ? `https://t.me/${botUsername}` : "https://t.me/"; // Fallback လင့်ခ်
-    
-    // Telegram Web App အထဲမှာ ဖွင့်ထားတာ သေချာလျှင် (Mini App Dropdown)
-    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-        tg.openTelegramLink(botLink);
-    } 
-    // ရိုးရိုး Web Browser (Chrome, Safari စသည်) တွင် ဖွင့်ထားလျှင်
-    else {
-        window.open(botLink, "_blank");
+    if (currentCategory !== 'all' || currentFolderId === 'root') {
+        container.innerHTML = `<span class="breadcrumb-current">${baseTitle}</span>`;
+        return;
     }
-}
 
-function showToast(message, type = "normal") {
-    let existing = document.querySelector(".toast");
-    if(existing) existing.remove(); 
-    let toast = document.createElement("div");
-    toast.className = `toast ${type}`;
-    toast.innerHTML = message;
-    document.body.appendChild(toast);
-    setTimeout(() => {
-        toast.style.animation = "fadeOut 0.3s forwards";
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-async function openFile(msgId) {
-    tg.HapticFeedback.impactOccurred("medium");
-    showToast("<i class='fa-solid fa-spinner fa-spin mr-2'></i> Sending to chat...", "normal");
-    try {
-        let res = await fetch(`${BACKEND_URL}/api/view_file`, {
-            method: "POST", headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ name: userName, msg_id: msgId })
-        });
-        let result = await res.json();
-        
-        if(result.success) {
-            tg.HapticFeedback.notificationOccurred("success");
-            showToast("<i class='fa-solid fa-check mr-2'></i> Ready! Swipe down app to view.", "success");
-        } else {
-            if (result.message && result.message.includes("Session Terminated")) {
-                showAlert(result.message, "Logged Out", () => window.location.reload());
-            } else { showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to send."), "error"); }
-        }
-    } catch(e) { showToast("Connection error.", "error"); }
-}
-
-async function openSettings() {
-    tg.HapticFeedback.impactOccurred("light");
-    document.getElementById("settings-modal").classList.remove("hidden");
-    try {
-        let res = await fetch(`${BACKEND_URL}/api/get_recovery_key`, {
-            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName })
-        });
-        let result = await res.json();
-        if(result.success) document.getElementById("recovery_key_display").innerText = result.key;
-    } catch(e) { document.getElementById("recovery_key_display").innerText = "Error loading key"; }
-}
-
-function closeSettings() { document.getElementById("settings-modal").classList.add("hidden"); }
-
-async function restoreCloud() {
-    let keyInput = document.getElementById("restore_key_input").value.trim();
-    if(!keyInput) return showAlert("Please enter a Recovery Key.", "Notice");
-    
-    let btn = event.target.closest('button');
-    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> Restoring Data..."; btn.disabled = true;
-    try {
-        let res = await fetch(`${BACKEND_URL}/api/restore_cloud`, {
-            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName, key: keyInput })
-        });
-        let result = await res.json();
-        if(result.success) {
-            closeSettings();
-            showToast(`<i class='fa-solid fa-check mr-2'></i> Successfully restored ${result.count} files!`, "success");
-            fetchCloudData(); 
-        } else { showAlert(result.message || "Invalid Key.", "Error"); }
-    } catch(e) { showAlert("Restore Failed.", "Error"); }
-    btn.innerHTML = "<i class='fa-solid fa-rotate-left mr-2'></i> Restore Now"; btn.disabled = false;
-}
-
-let alertCloseCallback = null;
-let confirmAlertCallback = null;
-
-function showAlert(message, title = "Notice", callback = null) {
-    alertCloseCallback = callback;
-    document.getElementById("custom-alert-title").innerText = title;
-    document.getElementById("custom-alert-message").innerText = message;
-    
-    let overlay = document.getElementById("custom-alert-overlay");
-    overlay.classList.remove("hidden");
-    setTimeout(() => { overlay.classList.add("show"); }, 10);
-    if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("warning");
-}
-
-function closeCustomAlert() {
-    let overlay = document.getElementById("custom-alert-overlay");
-    overlay.classList.remove("show");
-    setTimeout(() => {
-        overlay.classList.add("hidden");
-        if (alertCloseCallback) { let cb = alertCloseCallback; alertCloseCallback = null; cb(); }
-    }, 300);
-}
-
-function showConfirmAlert(message, callback) {
-    confirmAlertCallback = callback;
-    document.getElementById("confirm-alert-message").innerText = message;
-    let overlay = document.getElementById("confirm-alert-overlay");
-    overlay.classList.remove("hidden");
-    setTimeout(() => overlay.classList.add("show"), 10);
-    if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("warning");
-}
-
-function closeConfirmAlert() {
-    let overlay = document.getElementById("confirm-alert-overlay");
-    overlay.classList.remove("show");
-    setTimeout(() => overlay.classList.add("hidden"), 300);
-}
-
-function executeConfirmAction() {
-    closeConfirmAlert();
-    if (confirmAlertCallback) { confirmAlertCallback(); confirmAlertCallback = null; }
-}
-
-async function loginWithKey() {
-    let keyInput = document.getElementById("access_key_input").value.trim();
-    if(!keyInput) return showAlert("Please enter your Access Key.", "Notice");
-    
-    setLoadingText("Verifying Key...");
-    switchStep("step-loading");
-    
-    try {
-        let res = await fetch(`${BACKEND_URL}/api/login_with_key`, {
-            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ key: keyInput })
-        });
-        let result = await res.json();
-        
-        if(result.success) {
-            userName = result.name;
-            localStorage.setItem("temp_uid", userName);
-            setDisplayUsername(); 
-            switchStep("step-success");
-            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-            fetchCloudData(); 
-        } else {
-            showAlert(result.message, "Login Failed");
-            switchStep("step-key-login");
-        }
-    } catch(e) {
-        showAlert("Connection Failed. Please check your internet.", "Error");
-        switchStep("step-key-login");
+    let path = [];
+    let currId = currentFolderId;
+    while (currId !== 'root') {
+        let folderObj = allFilesData.find(f => f.id.toString() === currId.toString() && f.type === 'folder');
+        if (folderObj) {
+            path.unshift(folderObj); 
+            currId = folderObj.parent_id || 'root';
+        } else { break; }
     }
+
+    let breadcrumbsHtml = `<span class="breadcrumb-item" onclick="navigateToFolder('root')">${baseTitle}</span>`;
+    path.forEach((folder, index) => {
+        breadcrumbsHtml += `<i class="fa-solid fa-angle-right breadcrumb-separator"></i>`;
+        if (index === path.length - 1) breadcrumbsHtml += `<span class="breadcrumb-current">${folder.title}</span>`;
+        else breadcrumbsHtml += `<span class="breadcrumb-item" onclick="navigateToFolder('${folder.id}')">${folder.title}</span>`;
+    });
+    container.innerHTML = breadcrumbsHtml;
 }
 
-function copyRecoveryKey() {
-    let keyText = document.getElementById("recovery_key_display").innerText;
-    if (keyText && keyText !== "Loading..." && keyText !== "Error loading key") {
-        const showSuccess = () => {
-            showToast("<i class='fa-solid fa-check mr-2'></i> Key Copied to Clipboard!", "success");
-            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-        };
-        const fallbackCopy = () => {
-            let textArea = document.createElement("textarea");
-            textArea.value = keyText;
-            textArea.setAttribute('readonly', '');
-            textArea.style.position = "fixed"; 
-            textArea.style.left = "-99999px";
-            textArea.style.top = "-99999px";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-                if (document.execCommand('copy')) showSuccess();
-                else showAlert("Failed to copy. Please copy it manually.", "Error");
-            } catch (err) { showAlert("Failed to copy.", "Error"); }
-            document.body.removeChild(textArea);
-        };
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(keyText).then(showSuccess).catch(err => fallbackCopy());
-        } else fallbackCopy();
-    }
-}
-
-function updateStorageUI() {
-    let totalMB = 0;
-    if (allFilesData && allFilesData.length > 0) {
-        allFilesData.forEach(f => {
-            if(f.size && typeof f.size === "string") {
-                let num = parseFloat(f.size.replace(/[^\d.-]/g, ''));
-                if(!isNaN(num)) totalMB += (f.size.includes("GB") ? (num * 1024) : num);
-            }
-        });
-    }
-    let displaySize = "0.0 MB";
-    if (totalMB > 0) displaySize = (totalMB >= 1024) ? ((totalMB / 1024).toFixed(2) + " GB") : (totalMB.toFixed(1) + " MB");
-    
-    let storageString = `${displaySize} of Unlimited used`;
-    let sidebarText = document.getElementById("sidebar-storage-text");
-    if (sidebarText) sidebarText.innerText = storageString;
-    let settingsText = document.getElementById("settings-storage-text");
-    if (settingsText) settingsText.innerText = storageString;
-
-    let visualPercent = Math.max(3, Math.min((totalMB / 1048576) * 100, 85));
-    document.querySelectorAll('.progress-fill').forEach(el => el.style.width = visualPercent + '%');
-}
-
-setInterval(async () => {
-    let successStep = document.getElementById("step-success");
-    if (successStep && !successStep.classList.contains("hidden")) {
-        try {
-            let res = await fetch(`${BACKEND_URL}/api/check_session`, {
-                method: "POST", headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({ name: userName })
-            });
-            let result = await res.json();
-            if (result && !result.exists) {
-                localStorage.removeItem(`cloudData_${userName}`);
-                localStorage.removeItem(`cloudCounts_${userName}`);
-                localStorage.removeItem("temp_uid");
-                tg.HapticFeedback.notificationOccurred("error");
-                showAlert("လုံခြုံရေးအရ အကောင့်ပိတ်သွားပါသည်။ ပြန်လည် Login ဝင်ပေးပါ။", "Session Terminated", () => {
-                    window.location.reload(); 
-                });
-            }
-        } catch(e) {}
-    }
-}, 30000);
-
-// 💡 Rename လုပ်ရန် Modal ဖွင့်ခြင်း
-function openRenameModal() {
-    if (selectedFiles.length !== 1) return;
-    let fileId = selectedFiles[0];
-    let fileObj = allFilesData.find(f => f.id.toString() === fileId);
-    if (fileObj) {
-        document.getElementById("rename-input").value = fileObj.full_text || fileObj.title || "";
-        document.getElementById("rename-alert-overlay").classList.remove("hidden");
-        setTimeout(() => { 
-            document.getElementById("rename-alert-overlay").classList.add("show"); 
-            document.getElementById("rename-input").focus(); 
-        }, 10);
-    }
-}
-
-function closeRenameModal() {
-    let overlay = document.getElementById("rename-alert-overlay");
-    overlay.classList.remove("show");
-    setTimeout(() => overlay.classList.add("hidden"), 300);
-}
-
-// 💡 Rename API သို့ လှမ်းပို့ခြင်း
-async function executeRename() {
-    let newName = document.getElementById("rename-input").value.trim();
-    if (!newName) return showToast("နာမည်အသစ် ရိုက်ထည့်ပါ။", "error");
-    
-    let fileId = selectedFiles[0];
-    let btn = event.target.closest('button');
-    let originalHtml = btn.innerHTML;
-    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true;
-
-    try {
-        let res = await fetch(`${BACKEND_URL}/api/rename_file`, {
-            method: "POST", headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ name: userName, msg_id: fileId, new_title: newName })
-        });
-        let result = await res.json();
-        
-        if (result.success) {
-            tg.HapticFeedback.notificationOccurred("success");
-            showToast("<i class='fa-solid fa-check mr-2'></i> အမည်ပြောင်းလဲခြင်း အောင်မြင်ပါသည်", "success");
-            
-            // 💡 Local Data ကို ချက်ချင်း Update လုပ်၍ UI ကို Refresh လုပ်မည်
-            let fileIndex = allFilesData.findIndex(f => f.id.toString() === fileId);
-            if (fileIndex !== -1) {
-                allFilesData[fileIndex].title = newName;
-                allFilesData[fileIndex].full_text = newName;
-            }
-            
-            closeRenameModal();
-            cancelSelection(); 
-        } else {
-            showToast("Failed to rename.", "error");
-        }
-    } catch(e) { showToast("Connection error.", "error"); }
-    
-    btn.innerHTML = originalHtml; btn.disabled = false;
-}
-
-// =========================================================
-// 💡 FOLDER & MOVE FUNCTIONS (NEW)
-// =========================================================
-function openFolder(folderId) {
+function navigateToFolder(folderId) {
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     currentFolderId = folderId;
     renderBreadcrumb();
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
-function goBackFolder() {
+function openFolder(folderId) {
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    currentFolderId = 'root'; // 💡 လက်ရှိမှာ 1 Level Folder သာ အသုံးပြုထားပါသည်
+    currentFolderId = folderId;
+    renderBreadcrumb();
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
@@ -912,7 +545,6 @@ async function executeCreateFolder() {
     try {
         let res = await fetch(`${BACKEND_URL}/api/create_folder`, {
             method: "POST", headers: {"Content-Type": "application/json"},
-            // 💡 parent_id အဖြစ် လက်ရှိ currentFolderId ကို ထည့်ပို့လိုက်ပါသည်
             body: JSON.stringify({ name: userName, folder_name: name, parent_id: currentFolderId })
         });
         let result = await res.json();
@@ -931,14 +563,11 @@ function openMoveModal() {
     if(selectedFiles.length === 0) return;
     let select = document.getElementById("move-folder-select");
     select.innerHTML = '<option value="root">My Drive (Root)</option>';
-    
-    // 💡 ဆောက်ထားသော Folder များကို Select Option အဖြစ် ဆွဲထုတ်ခြင်း
     allFilesData.forEach(f => {
         if(f.type === 'folder' && !selectedFiles.includes(f.id.toString())) {
             select.innerHTML += `<option value="${f.id}">📁 ${f.title}</option>`;
         }
     });
-
     let overlay = document.getElementById("move-alert-overlay");
     overlay.classList.remove("hidden");
     setTimeout(() => { overlay.classList.add("show"); }, 10);
@@ -975,144 +604,320 @@ async function executeMoveFiles() {
     btn.innerHTML = oldHtml; btn.disabled = false;
 }
 
-// 💡 Render Breadcrumb Navigation (My Drive > Folder Name)
-function renderBreadcrumb() {
-    let container = document.getElementById('breadcrumb-container');
-    let titles = { 'all': 'My Drive', 'photo': 'Photos', 'video': 'Videos', 'doc': 'Documents', 'link': 'Links' };
-    let baseTitle = titles[currentCategory] || 'My Drive';
-
-    if (currentCategory !== 'all' || currentFolderId === 'root') {
-        container.innerHTML = `<span class="breadcrumb-current">${baseTitle}</span>`;
-        return;
-    }
-
-    // 💡 မိခင် Folder များကို နောက်ကြောင်းပြန်ရှာ၍ အဆင့်ဆင့် စီစဉ်ခြင်း
-    let path = [];
-    let currId = currentFolderId;
-    while (currId !== 'root') {
-        let folderObj = allFilesData.find(f => f.id.toString() === currId.toString() && f.type === 'folder');
-        if (folderObj) {
-            path.unshift(folderObj); // ရှေ့ဆုံးကနေ ဝင်ထည့်သည်
-            currId = folderObj.parent_id || 'root';
-        } else {
-            break;
-        }
-    }
-
-    // 💡 HTML ဖန်တီးခြင်း
-    let breadcrumbsHtml = `<span class="breadcrumb-item" onclick="navigateToFolder('root')">${baseTitle}</span>`;
-    path.forEach((folder, index) => {
-        breadcrumbsHtml += `<i class="fa-solid fa-angle-right breadcrumb-separator"></i>`;
-        if (index === path.length - 1) {
-            breadcrumbsHtml += `<span class="breadcrumb-current">${folder.title}</span>`;
-        } else {
-            breadcrumbsHtml += `<span class="breadcrumb-item" onclick="navigateToFolder('${folder.id}')">${folder.title}</span>`;
+// =========================================================
+// 💡 ACTIONS (DELETE, SHARE, RENAME)
+// =========================================================
+async function deleteSelectedFiles() {
+    if(selectedFiles.length === 0) return;
+    showConfirmAlert(`ရွေးချယ်ထားသော ဖိုင်များကို ဖျက်ပစ်ရန် သေချာပါသလား?\n\n(Folder ကိုဖျက်ပါက အတွင်းရှိဖိုင်များပါ အပြီးတိုင် ပျက်သွားပါမည်)`, async () => {
+        showToast("<i class='fa-solid fa-spinner fa-spin mr-2'></i> Deleting...", "normal");
+        try {
+            let res = await fetch(`${BACKEND_URL}/api/delete_files`, {
+                method: "POST", headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ name: userName, msg_ids: selectedFiles })
+            });
+            let result = await res.json();
+            if(result.success) {
+                if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+                showToast(`<i class='fa-solid fa-check mr-2'></i> ဖျက်ပစ်လိုက်ပါပြီ။`, "success");
+                allFilesData = allFilesData.filter(f => !selectedFiles.includes(f.id.toString()) && !selectedFiles.includes(f.parent_id));
+                localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
+                cancelSelection(); 
+                fetchCloudData(); 
+            } else { showToast("<i class='fa-solid fa-xmark mr-2'></i> Failed to delete.", "error"); }
+        } catch(e) { 
+            showToast("Connection error.", "error");
+            cancelSelection(); fetchCloudData();
         }
     });
-
-    container.innerHTML = breadcrumbsHtml;
 }
 
-// 💡 Breadcrumb မှတစ်ဆင့် Folder အဆင့်ဆင့် ပြန်သွားရန်
-function navigateToFolder(folderId) {
-    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    currentFolderId = folderId;
-    renderBreadcrumb();
-    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+let currentBaseShareLink = "", isRestrictMode = false;
+
+async function shareSelectedFiles() {
+    if(selectedFiles.length === 0) return;
+    let btn = event.target.closest('button');
+    let originalHtml = btn.innerHTML;
+    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true;
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/share_files`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, msg_ids: selectedFiles, is_restricted: isRestrictMode }) 
+        });
+        let result = await res.json();
+        if(result.success) {
+            tg.HapticFeedback.notificationOccurred("success");
+            currentBaseShareLink = result.link; 
+            document.getElementById("share-link-input").value = currentBaseShareLink;
+            document.getElementById("share-alert-overlay").classList.remove("hidden");
+            setTimeout(() => document.getElementById("share-alert-overlay").classList.add("show"), 10);
+        } else { showToast("<i class='fa-solid fa-xmark mr-2'></i> Failed to share.", "error"); }
+    } catch(e) { showToast("Connection error.", "error"); }
+    btn.innerHTML = originalHtml; btn.disabled = false;
 }
 
-// =========================================================
-// 💡 SORT & VIEW TOGGLE FUNCTIONS (PROFESSIONAL UI)
-// =========================================================
-
-// 💡 State များကို ခွဲခြားမှတ်သားမည်
-let sortBy = localStorage.getItem('cloudSortBy') || 'date'; // 'name', 'date', 'size'
-let sortOrder = localStorage.getItem('cloudSortOrder') || 'desc'; // 'asc', 'desc'
-let isListView = localStorage.getItem('cloudViewMode') === 'list';
-
-// 1. View ပြောင်းခြင်း
-function toggleView() {
-    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    isListView = !isListView;
-    localStorage.setItem('cloudViewMode', isListView ? 'list' : 'grid');
-    
-    let icon = document.getElementById("btn-view-toggle").querySelector("i");
-    icon.className = isListView ? "fa-solid fa-border-all" : "fa-solid fa-list";
-    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
-}
-
-// Window load ဖြစ်ချိန် UI များ အစပြုခြင်း
-window.addEventListener('DOMContentLoaded', () => {
-    let icon = document.getElementById("btn-view-toggle").querySelector("i");
-    if(icon) icon.className = isListView ? "fa-solid fa-border-all" : "fa-solid fa-list";
-    updateSortUI();
-});
-
-// 2. File Size ပြောင်းလဲတွက်ချက်သည့် Helper
-function parseSizeToBytes(sizeStr) {
-    if (!sizeStr) return 0;
-    let val = parseFloat(sizeStr);
-    if (isNaN(val)) return 0;
-    if (sizeStr.includes("GB")) return val * 1024 * 1024 * 1024;
-    if (sizeStr.includes("MB")) return val * 1024 * 1024;
-    if (sizeStr.includes("KB")) return val * 1024;
-    return val;
-}
-
-// 3. UI တွင် မြှား (Arrow) အတက်အကျ ပြောင်းလဲပြသခြင်း
-function updateSortUI() {
-    document.querySelectorAll('.sort-item').forEach(el => {
-        el.classList.remove('active', 'asc', 'desc');
-    });
-    
-    let activeItem = document.querySelector(`.sort-item[onclick="toggleSort('${sortBy}')"]`);
-    if (activeItem) {
-        activeItem.classList.add('active');
-        activeItem.classList.add(sortOrder);
-    }
-}
-
-// 4. Click နှိပ်လိုက်တိုင်း အကြီး/အသေး ပြောင်းပေးမည့် Toggle Function
-function toggleSort(column) {
-    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    
-    // တူညီတဲ့ Column ကို ထပ်နှိပ်ရင် အတက်/အကျ ပြောင်းမည်
-    if (sortBy === column) {
-        sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+function toggleRestrictMode() {
+    isRestrictMode = !isRestrictMode;
+    let icon = document.getElementById("restrict-icon");
+    let wrapper = document.querySelector(".restrict-toggle-wrapper");
+    if(isRestrictMode) {
+        icon.className = "fa-solid fa-lock"; wrapper.classList.add("active");
+        if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     } else {
-        // Column အသစ်ကို နှိပ်ရင် Default အတိုင်း စီမည်
-        sortBy = column;
-        sortOrder = column === 'name' ? 'asc' : 'desc'; // Name ဆို A-Z, Date/Size ဆို အကြီးကစမည်
+        icon.className = "fa-solid fa-lock-open"; wrapper.classList.remove("active");
+        if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     }
-    
-    localStorage.setItem('cloudSortBy', sortBy);
-    localStorage.setItem('cloudSortOrder', sortOrder);
-    
-    updateSortUI();
-    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+    updateShareLinkQuietly();
 }
 
-// 5. Array.sort() အသုံးပြု၍ File များကို စီစဉ်ခြင်း
-function sortFilesArray(filesArray) {
-    return filesArray.sort((a, b) => {
-        // Folder များကို အမြဲတမ်း အပေါ်ဆုံးမှာ ထားမည်
-        if (a.type === 'folder' && b.type !== 'folder') return -1;
-        if (a.type !== 'folder' && b.type === 'folder') return 1;
+async function updateShareLinkQuietly() {
+    let input = document.getElementById("share-link-input");
+    input.value = "Updating link...";
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/share_files`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, msg_ids: selectedFiles, is_restricted: isRestrictMode }) 
+        });
+        let result = await res.json();
+        if(result.success) { currentBaseShareLink = result.link; input.value = currentBaseShareLink; }
+    } catch(e) { input.value = "Error updating link"; }
+}
 
-        let result = 0;
-        if (sortBy === 'date') {
-            result = (a.timestamp || 0) - (b.timestamp || 0);
-        } else if (sortBy === 'name') {
-            let nameA = (a.title || "").toLowerCase();
-            let nameB = (b.title || "").toLowerCase();
-            result = nameA.localeCompare(nameB);
-        } else if (sortBy === 'size') {
-            let sizeA = parseSizeToBytes(a.size);
-            let sizeB = parseSizeToBytes(b.size);
-            result = sizeA - sizeB;
+function closeShareAlert() {
+    let overlay = document.getElementById("share-alert-overlay");
+    overlay.classList.remove("show");
+    setTimeout(() => { overlay.classList.add("hidden"); cancelSelection(); }, 300);
+}
+
+function copyShareLink() {
+    let keyText = document.getElementById("share-link-input").value;
+    if (keyText) {
+        const showSuccess = () => {
+            showToast("<i class='fa-solid fa-check mr-2'></i> Link Copied!", "success");
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+            closeShareAlert(); 
+        };
+        const fallbackCopy = () => {
+            let textArea = document.createElement("textarea");
+            textArea.value = keyText; textArea.setAttribute('readonly', '');
+            textArea.style.position = "fixed"; textArea.style.left = "-99999px"; textArea.style.top = "-99999px";
+            document.body.appendChild(textArea); textArea.focus(); textArea.select();
+            try { if (document.execCommand('copy')) showSuccess(); else showToast("Failed to copy link.", "error"); } 
+            catch (err) { showToast("Failed to copy link.", "error"); }
+            document.body.removeChild(textArea);
+        };
+        if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(keyText).then(showSuccess).catch(err => fallbackCopy()); } 
+        else fallbackCopy();
+    }
+}
+
+function openRenameModal() {
+    if (selectedFiles.length !== 1) return;
+    let fileId = selectedFiles[0];
+    let fileObj = allFilesData.find(f => f.id.toString() === fileId);
+    if (fileObj) {
+        document.getElementById("rename-input").value = fileObj.full_text || fileObj.title || "";
+        document.getElementById("rename-alert-overlay").classList.remove("hidden");
+        setTimeout(() => { document.getElementById("rename-alert-overlay").classList.add("show"); document.getElementById("rename-input").focus(); }, 10);
+    }
+}
+
+function closeRenameModal() {
+    let overlay = document.getElementById("rename-alert-overlay");
+    overlay.classList.remove("show");
+    setTimeout(() => overlay.classList.add("hidden"), 300);
+}
+
+async function executeRename() {
+    let newName = document.getElementById("rename-input").value.trim();
+    if (!newName) return showToast("နာမည်အသစ် ရိုက်ထည့်ပါ။", "error");
+    
+    let fileId = selectedFiles[0];
+    let btn = event.target.closest('button');
+    let originalHtml = btn.innerHTML;
+    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true;
+
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/rename_file`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, msg_id: fileId, new_title: newName })
+        });
+        let result = await res.json();
+        if (result.success) {
+            tg.HapticFeedback.notificationOccurred("success");
+            showToast("<i class='fa-solid fa-check mr-2'></i> ပြောင်းလဲပြီးပါပြီ", "success");
+            let fileIndex = allFilesData.findIndex(f => f.id.toString() === fileId);
+            if (fileIndex !== -1) { allFilesData[fileIndex].title = newName; allFilesData[fileIndex].full_text = newName; }
+            closeRenameModal(); cancelSelection(); 
+        } else showToast("Failed to rename.", "error");
+    } catch(e) { showToast("Connection error.", "error"); }
+    btn.innerHTML = originalHtml; btn.disabled = false;
+}
+
+// =========================================================
+// 💡 OTHER UTILS
+// =========================================================
+function filterFiles(type, element) {
+    currentCategory = type;
+    document.querySelectorAll('.nav-links li, .nav-item').forEach(el => el.classList.remove('active'));
+    if(element) element.classList.add('active');
+    renderBreadcrumb(); updateCategoryStatus();
+    renderFilesGrid(type === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+}
+
+function updateCategoryStatus() {
+    let statusText = document.getElementById("cloud-status");
+    let filtered = currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory);
+    let currentLoaded = filtered.length;
+    let total = cloudTotalCounts[currentCategory] !== undefined ? cloudTotalCounts[currentCategory] : currentLoaded;
+    if (total === 0 && currentLoaded === 0) statusText.innerText = "0 items";
+    else statusText.innerText = `${currentLoaded} items synced | total ${total} items`;
+}
+
+function searchFiles(query) {
+    let lowerQ = query.toLowerCase();
+    renderFilesGrid(allFilesData.filter(f => f.title.toLowerCase().includes(lowerQ)));
+}
+
+function goToBotForUpload() {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("medium");
+    let botLink = botUsername ? `https://t.me/${botUsername}` : "https://t.me/";
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) tg.openTelegramLink(botLink);
+    else window.open(botLink, "_blank");
+}
+
+function showToast(message, type = "normal") {
+    let existing = document.querySelector(".toast");
+    if(existing) existing.remove(); 
+    let toast = document.createElement("div");
+    toast.className = `toast ${type}`; toast.innerHTML = message;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.animation = "fadeOut 0.3s forwards"; setTimeout(() => toast.remove(), 300); }, 3000);
+}
+
+async function openFile(msgId) {
+    tg.HapticFeedback.impactOccurred("medium");
+    showToast("<i class='fa-solid fa-spinner fa-spin mr-2'></i> Sending to chat...", "normal");
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/view_file`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, msg_id: msgId })
+        });
+        let result = await res.json();
+        if(result.success) {
+            tg.HapticFeedback.notificationOccurred("success");
+            showToast("<i class='fa-solid fa-check mr-2'></i> Ready! Swipe down to view.", "success");
+        } else {
+            if (result.message && result.message.includes("Session Terminated")) showAlert(result.message, "Logged Out", () => window.location.reload());
+            else showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to send."), "error");
         }
-        
-        // sortOrder အပေါ်မူတည်၍ အတက်/အကျ ပြန်ထုတ်ပေးမည်
-        return sortOrder === 'asc' ? result : -result;
-    });
+    } catch(e) { showToast("Connection error.", "error"); }
 }
+
+async function openSettings() {
+    tg.HapticFeedback.impactOccurred("light");
+    document.getElementById("settings-modal").classList.remove("hidden");
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/get_recovery_key`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName }) });
+        let result = await res.json();
+        if(result.success) document.getElementById("recovery_key_display").innerText = result.key;
+    } catch(e) { document.getElementById("recovery_key_display").innerText = "Error loading key"; }
+}
+
+function closeSettings() { document.getElementById("settings-modal").classList.add("hidden"); }
+
+async function restoreCloud() {
+    let keyInput = document.getElementById("restore_key_input").value.trim();
+    if(!keyInput) return showAlert("Please enter a Recovery Key.", "Notice");
+    
+    let btn = event.target.closest('button'); btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> Restoring Data..."; btn.disabled = true;
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/restore_cloud`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName, key: keyInput }) });
+        let result = await res.json();
+        if(result.success) {
+            closeSettings(); showToast(`<i class='fa-solid fa-check mr-2'></i> Successfully restored ${result.count} files!`, "success"); fetchCloudData(); 
+        } else showAlert(result.message || "Invalid Key.", "Error");
+    } catch(e) { showAlert("Restore Failed.", "Error"); }
+    btn.innerHTML = "<i class='fa-solid fa-rotate-left mr-2'></i> Restore Now"; btn.disabled = false;
+}
+
+let alertCloseCallback = null, confirmAlertCallback = null;
+function showAlert(message, title = "Notice", callback = null) {
+    alertCloseCallback = callback;
+    document.getElementById("custom-alert-title").innerText = title; document.getElementById("custom-alert-message").innerText = message;
+    let overlay = document.getElementById("custom-alert-overlay");
+    overlay.classList.remove("hidden"); setTimeout(() => { overlay.classList.add("show"); }, 10);
+    if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("warning");
+}
+
+function closeCustomAlert() {
+    let overlay = document.getElementById("custom-alert-overlay"); overlay.classList.remove("show");
+    setTimeout(() => { overlay.classList.add("hidden"); if (alertCloseCallback) { let cb = alertCloseCallback; alertCloseCallback = null; cb(); } }, 300);
+}
+
+function showConfirmAlert(message, callback) {
+    confirmAlertCallback = callback; document.getElementById("confirm-alert-message").innerText = message;
+    let overlay = document.getElementById("confirm-alert-overlay"); overlay.classList.remove("hidden");
+    setTimeout(() => overlay.classList.add("show"), 10); if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("warning");
+}
+
+function closeConfirmAlert() {
+    let overlay = document.getElementById("confirm-alert-overlay"); overlay.classList.remove("show");
+    setTimeout(() => overlay.classList.add("hidden"), 300);
+}
+function executeConfirmAction() { closeConfirmAlert(); if (confirmAlertCallback) { confirmAlertCallback(); confirmAlertCallback = null; } }
+
+async function loginWithKey() {
+    let keyInput = document.getElementById("access_key_input").value.trim();
+    if(!keyInput) return showAlert("Please enter your Access Key.", "Notice");
+    setLoadingText("Verifying Key..."); switchStep("step-loading");
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/login_with_key`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ key: keyInput }) });
+        let result = await res.json();
+        if(result.success) {
+            userName = result.name; localStorage.setItem("temp_uid", userName); setDisplayUsername(); 
+            switchStep("step-success"); if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success"); fetchCloudData(); 
+        } else { showAlert(result.message, "Login Failed"); switchStep("step-key-login"); }
+    } catch(e) { showAlert("Connection Failed. Please check your internet.", "Error"); switchStep("step-key-login"); }
+}
+
+function copyRecoveryKey() {
+    let keyText = document.getElementById("recovery_key_display").innerText;
+    if (keyText && keyText !== "Loading..." && keyText !== "Error loading key") {
+        const showSuccess = () => { showToast("<i class='fa-solid fa-check mr-2'></i> Key Copied to Clipboard!", "success"); if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success"); };
+        const fallbackCopy = () => {
+            let textArea = document.createElement("textarea"); textArea.value = keyText; textArea.setAttribute('readonly', ''); textArea.style.position = "fixed"; textArea.style.left = "-99999px"; textArea.style.top = "-99999px";
+            document.body.appendChild(textArea); textArea.focus(); textArea.select();
+            try { if (document.execCommand('copy')) showSuccess(); else showAlert("Failed to copy.", "Error"); } catch (err) { showAlert("Failed to copy.", "Error"); } document.body.removeChild(textArea);
+        };
+        if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(keyText).then(showSuccess).catch(err => fallbackCopy()); } else fallbackCopy();
+    }
+}
+
+function updateStorageUI() {
+    let totalMB = 0;
+    if (allFilesData && allFilesData.length > 0) {
+        allFilesData.forEach(f => {
+            if(f.size && typeof f.size === "string") { let num = parseFloat(f.size.replace(/[^\d.-]/g, '')); if(!isNaN(num)) totalMB += (f.size.includes("GB") ? (num * 1024) : num); }
+        });
+    }
+    let displaySize = "0.0 MB"; if (totalMB > 0) displaySize = (totalMB >= 1024) ? ((totalMB / 1024).toFixed(2) + " GB") : (totalMB.toFixed(1) + " MB");
+    let storageString = `${displaySize} of Unlimited used`;
+    let sidebarText = document.getElementById("sidebar-storage-text"); if (sidebarText) sidebarText.innerText = storageString;
+    let settingsText = document.getElementById("settings-storage-text"); if (settingsText) settingsText.innerText = storageString;
+    let visualPercent = Math.max(3, Math.min((totalMB / 1048576) * 100, 85)); document.querySelectorAll('.progress-fill').forEach(el => el.style.width = visualPercent + '%');
+}
+
+setInterval(async () => {
+    let successStep = document.getElementById("step-success");
+    if (successStep && !successStep.classList.contains("hidden")) {
+        try {
+            let res = await fetch(`${BACKEND_URL}/api/check_session`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName }) });
+            let result = await res.json();
+            if (result && !result.exists) {
+                localStorage.removeItem(`cloudData_${userName}`); localStorage.removeItem(`cloudCounts_${userName}`); localStorage.removeItem("temp_uid");
+                tg.HapticFeedback.notificationOccurred("error"); showAlert("လုံခြုံရေးအရ အကောင့်ပိတ်သွားပါသည်။ ပြန်လည် Login ဝင်ပေးပါ။", "Session Terminated", () => { window.location.reload(); });
+            }
+        } catch(e) {}
+    }
+}, 30000);
