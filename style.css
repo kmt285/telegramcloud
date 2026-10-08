@@ -273,6 +273,37 @@ body.selection-active .file-card.selected .select-indicator {
 @keyframes popIn { from { bottom: 60px; opacity: 0; } to { bottom: 80px; opacity: 1; } }
 @keyframes fadeOut { to { opacity: 0; bottom: 60px; } }
 
+/* 💡 Breadcrumb Navigation Styles */
+.breadcrumb-container {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.breadcrumb-item {
+    cursor: pointer;
+    color: var(--text-main);
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.breadcrumb-item:hover {
+    color: var(--primary-blue);
+}
+.breadcrumb-separator {
+    color: var(--primary-blue);
+    font-size: 14px;
+    font-weight: bold;
+}
+.breadcrumb-current {
+    color: var(--text-muted);
+    cursor: default;
+}
+
 /* 📱 Mobile Responsive */
 @media (max-width: 768px) {
     .sidebar { display: none !important; }
