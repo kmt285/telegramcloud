@@ -399,27 +399,33 @@ function renderFilesGrid(files) {
 // =========================================================
 async function deleteSelectedFiles() {
     if(selectedFiles.length === 0) return;
-    showConfirmAlert(`ရွေးချယ်ထားသော ဖိုင် ${selectedFiles.length} ခုကို ဖျက်ပစ်ရန် သေချာပါသလား?\n\n(Database ထဲမှပါ အပြီးတိုင် ပျက်သွားပါမည်)`, async () => {
-        showToast("<i class='fa-solid fa-spinner fa-spin mr-2'></i> Deleting files...", "normal");
+    
+    showConfirmAlert(`ရွေးချယ်ထားသော ဖိုင်များကို ဖျက်ပစ်ရန် သေချာပါသလား?\n\n(Folder ကိုဖျက်ပါက အတွင်းရှိဖိုင်များပါ အပြီးတိုင် ပျက်သွားပါမည်)`, async () => {
+        showToast("<i class='fa-solid fa-spinner fa-spin mr-2'></i> Deleting...", "normal");
         try {
             let res = await fetch(`${BACKEND_URL}/api/delete_files`, {
                 method: "POST", headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({ name: userName, msg_ids: selectedFiles })
             });
             let result = await res.json();
+            
             if(result.success) {
-                tg.HapticFeedback.notificationOccurred("success");
-                showToast(`<i class='fa-solid fa-check mr-2'></i> ဖိုင်များကို အောင်မြင်စွာ ဖျက်ပစ်လိုက်ပါပြီ။`, "success");
+                if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+                showToast(`<i class='fa-solid fa-check mr-2'></i> ဖိုင်များကို အပြီးတိုင် ဖျက်ပစ်လိုက်ပါပြီ။`, "success");
                 
-                allFilesData = allFilesData.filter(f => !selectedFiles.includes(f.id.toString()));
+                // 💡 UI ဘက်တွင် ရွေးထားသော ဖိုင်များသာမက၊ ၎င်း Folder အောက်ရှိ ဖိုင်များကိုပါ Local ထဲမှ ရှင်းလင်းခြင်း
+                allFilesData = allFilesData.filter(f => !selectedFiles.includes(f.id.toString()) && !selectedFiles.includes(f.parent_id));
                 localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
                 
                 cancelSelection(); 
-                fetchCloudData(); 
-            } else { showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to delete."), "error"); }
+                fetchCloudData(); // 💡 Storage MB များနှင့် Tab များကို မှန်ကန်စေရန် Server မှ ပြန်ခေါ်မည်
+            } else { 
+                showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to delete."), "error"); 
+            }
         } catch(e) { 
-            showToast("ဖျက်သိမ်းပြီးပါပြီ။ UI Refresh ဖြစ်ရန် ခဏစောင့်ပါ။", "normal");
-            setTimeout(() => { cancelSelection(); fetchCloudData(); }, 1500);
+            showToast("Connection error.", "error");
+            cancelSelection();
+            fetchCloudData();
         }
     });
 }
