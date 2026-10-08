@@ -1023,8 +1023,13 @@ function navigateToFolder(folderId) {
 }
 
 // =========================================================
-// 💡 SORT & VIEW TOGGLE FUNCTIONS
+// 💡 SORT & VIEW TOGGLE FUNCTIONS (PROFESSIONAL UI)
 // =========================================================
+
+// 💡 State များကို ခွဲခြားမှတ်သားမည်
+let sortBy = localStorage.getItem('cloudSortBy') || 'date'; // 'name', 'date', 'size'
+let sortOrder = localStorage.getItem('cloudSortOrder') || 'desc'; // 'asc', 'desc'
+let isListView = localStorage.getItem('cloudViewMode') === 'list';
 
 // 1. View ပြောင်းခြင်း
 function toggleView() {
@@ -1032,20 +1037,19 @@ function toggleView() {
     isListView = !isListView;
     localStorage.setItem('cloudViewMode', isListView ? 'list' : 'grid');
     
-    // ခလုတ် Icon ပြောင်းခြင်း
     let icon = document.getElementById("btn-view-toggle").querySelector("i");
     icon.className = isListView ? "fa-solid fa-border-all" : "fa-solid fa-list";
-    
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
-// Window load ဖြစ်ချိန်တွင် View Button Icon ကို မှန်ကန်အောင် အစပြုပေးခြင်း
+// Window load ဖြစ်ချိန် UI များ အစပြုခြင်း
 window.addEventListener('DOMContentLoaded', () => {
     let icon = document.getElementById("btn-view-toggle").querySelector("i");
     if(icon) icon.className = isListView ? "fa-solid fa-border-all" : "fa-solid fa-list";
+    updateSortUI();
 });
 
-// 2. File Size (1.2 MB, 450 KB) များကို Byte အဖြစ်ပြောင်း၍ တွက်ချက်ပေးသည့် Helper
+// 2. File Size ပြောင်းလဲတွက်ချက်သည့် Helper
 function parseSizeToBytes(sizeStr) {
     if (!sizeStr) return 0;
     let val = parseFloat(sizeStr);
@@ -1056,61 +1060,60 @@ function parseSizeToBytes(sizeStr) {
     return val;
 }
 
-// 3. Array.sort() အသုံးပြု၍ File များကို စီစဉ်ခြင်း
+// 3. UI တွင် မြှား (Arrow) အတက်အကျ ပြောင်းလဲပြသခြင်း
+function updateSortUI() {
+    document.querySelectorAll('.sort-item').forEach(el => {
+        el.classList.remove('active', 'asc', 'desc');
+    });
+    
+    let activeItem = document.querySelector(`.sort-item[onclick="toggleSort('${sortBy}')"]`);
+    if (activeItem) {
+        activeItem.classList.add('active');
+        activeItem.classList.add(sortOrder);
+    }
+}
+
+// 4. Click နှိပ်လိုက်တိုင်း အကြီး/အသေး ပြောင်းပေးမည့် Toggle Function
+function toggleSort(column) {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    
+    // တူညီတဲ့ Column ကို ထပ်နှိပ်ရင် အတက်/အကျ ပြောင်းမည်
+    if (sortBy === column) {
+        sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        // Column အသစ်ကို နှိပ်ရင် Default အတိုင်း စီမည်
+        sortBy = column;
+        sortOrder = column === 'name' ? 'asc' : 'desc'; // Name ဆို A-Z, Date/Size ဆို အကြီးကစမည်
+    }
+    
+    localStorage.setItem('cloudSortBy', sortBy);
+    localStorage.setItem('cloudSortOrder', sortOrder);
+    
+    updateSortUI();
+    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+}
+
+// 5. Array.sort() အသုံးပြု၍ File များကို စီစဉ်ခြင်း
 function sortFilesArray(filesArray) {
     return filesArray.sort((a, b) => {
         // Folder များကို အမြဲတမ်း အပေါ်ဆုံးမှာ ထားမည်
         if (a.type === 'folder' && b.type !== 'folder') return -1;
         if (a.type !== 'folder' && b.type === 'folder') return 1;
 
-        // Date (အဟောင်း / အသစ်)
-        if (currentSortMode === 'date_desc') return (b.timestamp || 0) - (a.timestamp || 0);
-        if (currentSortMode === 'date_asc') return (a.timestamp || 0) - (b.timestamp || 0);
+        let result = 0;
+        if (sortBy === 'date') {
+            result = (a.timestamp || 0) - (b.timestamp || 0);
+        } else if (sortBy === 'name') {
+            let nameA = (a.title || "").toLowerCase();
+            let nameB = (b.title || "").toLowerCase();
+            result = nameA.localeCompare(nameB);
+        } else if (sortBy === 'size') {
+            let sizeA = parseSizeToBytes(a.size);
+            let sizeB = parseSizeToBytes(b.size);
+            result = sizeA - sizeB;
+        }
         
-        // Name (A-Z / Z-A)
-        let nameA = (a.title || "").toLowerCase();
-        let nameB = (b.title || "").toLowerCase();
-        if (currentSortMode === 'name_asc') return nameA.localeCompare(nameB);
-        if (currentSortMode === 'name_desc') return nameB.localeCompare(nameA);
-        
-        // Size (အကြီး / အသေး)
-        let sizeA = parseSizeToBytes(a.size);
-        let sizeB = parseSizeToBytes(b.size);
-        if (currentSortMode === 'size_desc') return sizeB - sizeA;
-        if (currentSortMode === 'size_asc') return sizeA - sizeB;
-        
-        return 0;
+        // sortOrder အပေါ်မူတည်၍ အတက်/အကျ ပြန်ထုတ်ပေးမည်
+        return sortOrder === 'asc' ? result : -result;
     });
-}
-
-// 4. Sort Menu ဖွင့်/ပိတ် နှင့် အလုပ်လုပ်စေခြင်း
-function openSortMenu() {
-    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    let overlay = document.getElementById("sort-menu-overlay");
-    overlay.classList.remove("hidden");
-    setTimeout(() => { overlay.classList.add("show"); }, 10);
-    
-    // လက်ရှိရွေးချယ်ထားသော Sort ကို အရောင်ပြောင်းပြခြင်း
-    document.querySelectorAll("#sort-menu-overlay .action-list li").forEach(li => {
-        li.style.color = "var(--text-main)";
-        li.querySelector("i").style.color = "var(--text-muted)";
-    });
-    let activeLi = document.getElementById("sort-opt-" + currentSortMode);
-    if (activeLi) {
-        activeLi.style.color = "var(--primary-blue)";
-        activeLi.querySelector("i").style.color = "var(--primary-blue)";
-    }
-}
-
-function closeSortMenu() {
-    let overlay = document.getElementById("sort-menu-overlay");
-    overlay.classList.remove("show");
-    setTimeout(() => { overlay.classList.add("hidden"); }, 300);
-}
-
-function applySort(mode) {
-    currentSortMode = mode;
-    localStorage.setItem('cloudSortMode', currentSortMode);
-    closeSortMenu();
-    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
