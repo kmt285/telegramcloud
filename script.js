@@ -195,7 +195,6 @@ async function fetchCloudData(isLoadMore = false) {
             }
             localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
             
-            // 💡 Functions များ ပြန်လည် အလုပ်လုပ်စေရန် သေချာခေါ်ထားပါသည်
             renderBreadcrumb();
             updateCategoryStatus();
             updateStorageUI(); 
@@ -276,12 +275,11 @@ function toggleFileSelect(id) {
     }
     
     let bar = document.getElementById("selection-bar");
-    let upBar = document.getElementById("upload-bar");
     
     if(selectedFiles.length > 0) {
-        bar.classList.remove("hidden");
-        if(upBar) upBar.classList.add("hidden");
-        document.getElementById("selection-count").innerText = `${selectedFiles.length} Selected`;
+        if (bar) bar.classList.remove("hidden");
+        let countText = document.getElementById("selection-count");
+        if (countText) countText.innerText = `${selectedFiles.length} Selected`;
     } else {
         cancelSelection(); 
     }
@@ -311,13 +309,14 @@ function closeMoreMenu() {
     }
 }
 
+// 💡 ဤနေရာတွင် အမှားဖြစ်စေသော (မရှိတော့သည့်) element အဟောင်းများကို ဖယ်ရှားထားပါသည်
 function cancelSelection() {
     selectedFiles = [];
     isSelectionMode = false;
     document.body.classList.remove("selection-active"); 
     
-    document.getElementById("selection-bar").classList.add("hidden");
-    document.getElementById("upload-bar").classList.remove("hidden");
+    let bar = document.getElementById("selection-bar");
+    if (bar) bar.classList.add("hidden");
     
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
@@ -403,18 +402,6 @@ function applySort(type) {
     updateSortUI();
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
     closeSortMenu();
-}
-
-function toggleSort(column) {
-    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    if (sortBy === column) sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-    else { sortBy = column; sortOrder = column === 'name' ? 'asc' : 'desc'; }
-    
-    localStorage.setItem('cloudSortBy', sortBy);
-    localStorage.setItem('cloudSortOrder', sortOrder);
-    
-    updateSortUI();
-    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
 function toggleView() {
@@ -605,9 +592,10 @@ async function executeCreateFolder() {
     let name = document.getElementById("folder-input").value.trim();
     if (!name) return showToast("ဖိုင်တွဲအမည် ရိုက်ထည့်ပါ။", "error");
     
-    let btn = event.target.closest('button');
-    let oldHtml = btn.innerHTML;
-    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true;
+    // 💡 Error မဖြစ်စေရန် ပြုပြင်ထားပါသည်
+    let btn = window.event ? window.event.target.closest('button') : null;
+    let oldHtml = "";
+    if (btn) { oldHtml = btn.innerHTML; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true; }
 
     try {
         let res = await fetch(`${BACKEND_URL}/api/create_folder`, {
@@ -622,19 +610,22 @@ async function executeCreateFolder() {
             renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
             showToast("<i class='fa-solid fa-check mr-2'></i> Folder ဆောက်ပြီးပါပြီ", "success");
         }
-    } catch(e) { showToast("Connection Error", "error"); }
-    btn.innerHTML = oldHtml; btn.disabled = false;
+    } catch(e) { console.error(e); showToast("Connection Error", "error"); }
+    
+    if (btn) { btn.innerHTML = oldHtml; btn.disabled = false; }
 }
 
 function openMoveModal() {
     if(selectedFiles.length === 0) return;
     let select = document.getElementById("move-folder-select");
-    select.innerHTML = '<option value="root">My Drive (Root)</option>';
-    allFilesData.forEach(f => {
-        if(f.type === 'folder' && !selectedFiles.includes(f.id.toString())) {
-            select.innerHTML += `<option value="${f.id}">📁 ${f.title}</option>`;
-        }
-    });
+    if(select) {
+        select.innerHTML = '<option value="root">My Drive (Root)</option>';
+        allFilesData.forEach(f => {
+            if(f.type === 'folder' && !selectedFiles.includes(f.id.toString())) {
+                select.innerHTML += `<option value="${f.id}">📁 ${f.title}</option>`;
+            }
+        });
+    }
     let overlay = document.getElementById("move-alert-overlay");
     if(overlay) {
         overlay.classList.remove("hidden");
@@ -651,10 +642,12 @@ function closeMoveModal() {
 }
 
 async function executeMoveFiles() {
-    let targetId = document.getElementById("move-folder-select").value;
-    let btn = event.target.closest('button');
-    let oldHtml = btn.innerHTML;
-    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true;
+    let selectEl = document.getElementById("move-folder-select");
+    let targetId = selectEl ? selectEl.value : 'root';
+    
+    let btn = window.event ? window.event.target.closest('button') : null;
+    let oldHtml = "";
+    if (btn) { oldHtml = btn.innerHTML; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true; }
 
     try {
         let res = await fetch(`${BACKEND_URL}/api/move_files`, {
@@ -664,15 +657,17 @@ async function executeMoveFiles() {
         let result = await res.json();
         if(result.success) {
             allFilesData.forEach(f => {
-                if (selectedFiles.includes(f.id.toString())) f.parent_id = targetId;
+                let fId = f.id ? f.id.toString() : "";
+                if (selectedFiles.includes(fId)) f.parent_id = targetId;
             });
             localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
             closeMoveModal();
             cancelSelection();
             showToast("<i class='fa-solid fa-check mr-2'></i> ဖိုင်များကို ရွှေ့လိုက်ပါပြီ", "success");
         }
-    } catch(e) { showToast("Connection Error", "error"); }
-    btn.innerHTML = oldHtml; btn.disabled = false;
+    } catch(e) { console.error(e); showToast("Connection Error", "error"); }
+    
+    if (btn) { btn.innerHTML = oldHtml; btn.disabled = false; }
 }
 
 // =========================================================
@@ -689,16 +684,25 @@ async function deleteSelectedFiles() {
             });
             let result = await res.json();
             if(result.success) {
-                if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+                if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("success");
                 showToast(`<i class='fa-solid fa-check mr-2'></i> ဖျက်ပစ်လိုက်ပါပြီ။`, "success");
-                allFilesData = allFilesData.filter(f => !selectedFiles.includes(f.id.toString()) && !selectedFiles.includes(f.parent_id));
+                
+                // 💡 Error မဖြစ်စေရန် ပြုပြင်ထားပါသည်
+                allFilesData = allFilesData.filter(f => {
+                    let fId = f.id ? f.id.toString() : "";
+                    let pId = f.parent_id ? f.parent_id.toString() : "";
+                    return !selectedFiles.includes(fId) && !selectedFiles.includes(pId);
+                });
+                
                 localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
                 cancelSelection(); 
                 fetchCloudData(); 
             } else { showToast("<i class='fa-solid fa-xmark mr-2'></i> Failed to delete.", "error"); }
         } catch(e) { 
+            console.error("Delete Error:", e);
             showToast("Connection error.", "error");
-            cancelSelection(); fetchCloudData();
+            cancelSelection(); 
+            fetchCloudData();
         }
     });
 }
@@ -707,9 +711,10 @@ let currentBaseShareLink = "", isRestrictMode = false;
 
 async function shareSelectedFiles() {
     if(selectedFiles.length === 0) return;
-    let btn = event.target.closest('button');
-    let originalHtml = btn.innerHTML;
-    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true;
+    let btn = window.event ? window.event.target.closest('button') : null;
+    let originalHtml = "";
+    if(btn) { originalHtml = btn.innerHTML; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true; }
+    
     try {
         let res = await fetch(`${BACKEND_URL}/api/share_files`, {
             method: "POST", headers: {"Content-Type": "application/json"},
@@ -717,14 +722,19 @@ async function shareSelectedFiles() {
         });
         let result = await res.json();
         if(result.success) {
-            tg.HapticFeedback.notificationOccurred("success");
+            if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("success");
             currentBaseShareLink = result.link; 
-            document.getElementById("share-link-input").value = currentBaseShareLink;
-            document.getElementById("share-alert-overlay").classList.remove("hidden");
-            setTimeout(() => document.getElementById("share-alert-overlay").classList.add("show"), 10);
+            let shareInput = document.getElementById("share-link-input");
+            if(shareInput) shareInput.value = currentBaseShareLink;
+            let overlay = document.getElementById("share-alert-overlay");
+            if(overlay) {
+                overlay.classList.remove("hidden");
+                setTimeout(() => overlay.classList.add("show"), 10);
+            }
         } else { showToast("<i class='fa-solid fa-xmark mr-2'></i> Failed to share.", "error"); }
-    } catch(e) { showToast("Connection error.", "error"); }
-    btn.innerHTML = originalHtml; btn.disabled = false;
+    } catch(e) { console.error(e); showToast("Connection error.", "error"); }
+    
+    if(btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
 }
 
 function toggleRestrictMode() {
@@ -732,10 +742,12 @@ function toggleRestrictMode() {
     let icon = document.getElementById("restrict-icon");
     let wrapper = document.querySelector(".restrict-toggle-wrapper");
     if(isRestrictMode) {
-        icon.className = "fa-solid fa-lock"; wrapper.classList.add("active");
+        if(icon) icon.className = "fa-solid fa-lock"; 
+        if(wrapper) wrapper.classList.add("active");
         if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     } else {
-        icon.className = "fa-solid fa-lock-open"; wrapper.classList.remove("active");
+        if(icon) icon.className = "fa-solid fa-lock-open"; 
+        if(wrapper) wrapper.classList.remove("active");
         if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     }
     updateShareLinkQuietly();
@@ -743,15 +755,15 @@ function toggleRestrictMode() {
 
 async function updateShareLinkQuietly() {
     let input = document.getElementById("share-link-input");
-    input.value = "Updating link...";
+    if(input) input.value = "Updating link...";
     try {
         let res = await fetch(`${BACKEND_URL}/api/share_files`, {
             method: "POST", headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ name: userName, msg_ids: selectedFiles, is_restricted: isRestrictMode }) 
         });
         let result = await res.json();
-        if(result.success) { currentBaseShareLink = result.link; input.value = currentBaseShareLink; }
-    } catch(e) { input.value = "Error updating link"; }
+        if(result.success && input) { currentBaseShareLink = result.link; input.value = currentBaseShareLink; }
+    } catch(e) { if(input) input.value = "Error updating link"; }
 }
 
 function closeShareAlert() {
@@ -763,11 +775,14 @@ function closeShareAlert() {
 }
 
 function copyShareLink() {
-    let keyText = document.getElementById("share-link-input").value;
+    let inputEl = document.getElementById("share-link-input");
+    if(!inputEl) return;
+    let keyText = inputEl.value;
+    
     if (keyText) {
         const showSuccess = () => {
             showToast("<i class='fa-solid fa-check mr-2'></i> Link Copied!", "success");
-            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+            if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("success");
             closeShareAlert(); 
         };
         const fallbackCopy = () => {
@@ -787,11 +802,16 @@ function copyShareLink() {
 function openRenameModal() {
     if (selectedFiles.length !== 1) return;
     let fileId = selectedFiles[0];
-    let fileObj = allFilesData.find(f => f.id.toString() === fileId);
+    let fileObj = allFilesData.find(f => (f.id ? f.id.toString() : "") === fileId);
     if (fileObj) {
-        document.getElementById("rename-input").value = fileObj.full_text || fileObj.title || "";
-        document.getElementById("rename-alert-overlay").classList.remove("hidden");
-        setTimeout(() => { document.getElementById("rename-alert-overlay").classList.add("show"); document.getElementById("rename-input").focus(); }, 10);
+        let renameInput = document.getElementById("rename-input");
+        if(renameInput) renameInput.value = fileObj.full_text || fileObj.title || "";
+        
+        let overlay = document.getElementById("rename-alert-overlay");
+        if(overlay) {
+            overlay.classList.remove("hidden");
+            setTimeout(() => { overlay.classList.add("show"); if(renameInput) renameInput.focus(); }, 10);
+        }
     }
 }
 
@@ -804,13 +824,15 @@ function closeRenameModal() {
 }
 
 async function executeRename() {
-    let newName = document.getElementById("rename-input").value.trim();
+    let inputEl = document.getElementById("rename-input");
+    if(!inputEl) return;
+    let newName = inputEl.value.trim();
     if (!newName) return showToast("နာမည်အသစ် ရိုက်ထည့်ပါ။", "error");
     
     let fileId = selectedFiles[0];
-    let btn = event.target.closest('button');
-    let originalHtml = btn.innerHTML;
-    btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true;
+    let btn = window.event ? window.event.target.closest('button') : null;
+    let originalHtml = "";
+    if (btn) { originalHtml = btn.innerHTML; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true; }
 
     try {
         let res = await fetch(`${BACKEND_URL}/api/rename_file`, {
@@ -819,14 +841,15 @@ async function executeRename() {
         });
         let result = await res.json();
         if (result.success) {
-            tg.HapticFeedback.notificationOccurred("success");
+            if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("success");
             showToast("<i class='fa-solid fa-check mr-2'></i> ပြောင်းလဲပြီးပါပြီ", "success");
-            let fileIndex = allFilesData.findIndex(f => f.id.toString() === fileId);
+            let fileIndex = allFilesData.findIndex(f => (f.id ? f.id.toString() : "") === fileId);
             if (fileIndex !== -1) { allFilesData[fileIndex].title = newName; allFilesData[fileIndex].full_text = newName; }
             closeRenameModal(); cancelSelection(); 
         } else showToast("Failed to rename.", "error");
-    } catch(e) { showToast("Connection error.", "error"); }
-    btn.innerHTML = originalHtml; btn.disabled = false;
+    } catch(e) { console.error(e); showToast("Connection error.", "error"); }
+    
+    if (btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
 }
 
 // =========================================================
@@ -845,13 +868,15 @@ function updateCategoryStatus() {
     let filtered = currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory);
     let currentLoaded = filtered.length;
     let total = cloudTotalCounts[currentCategory] !== undefined ? cloudTotalCounts[currentCategory] : currentLoaded;
-    if (total === 0 && currentLoaded === 0) statusText.innerText = "0 items";
-    else statusText.innerText = `${currentLoaded} items synced | total ${total} items`;
+    if (statusText) {
+        if (total === 0 && currentLoaded === 0) statusText.innerText = "0 items";
+        else statusText.innerText = `${currentLoaded} items synced | total ${total} items`;
+    }
 }
 
 function searchFiles(query) {
     let lowerQ = query.toLowerCase();
-    renderFilesGrid(allFilesData.filter(f => f.title.toLowerCase().includes(lowerQ)));
+    renderFilesGrid(allFilesData.filter(f => (f.title || "").toLowerCase().includes(lowerQ)));
 }
 
 function goToBotForUpload() {
@@ -880,13 +905,13 @@ async function openFile(msgId) {
         });
         let result = await res.json();
         if(result.success) {
-            tg.HapticFeedback.notificationOccurred("success");
+            if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("success");
             showToast("<i class='fa-solid fa-check mr-2'></i> Ready! Swipe down to view.", "success");
         } else {
             if (result.message && result.message.includes("Session Terminated")) showAlert(result.message, "Logged Out", () => window.location.reload());
             else showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to send."), "error");
         }
-    } catch(e) { showToast("Connection error.", "error"); }
+    } catch(e) { console.error(e); showToast("Connection error.", "error"); }
 }
 
 async function openSettings() {
@@ -896,8 +921,12 @@ async function openSettings() {
     try {
         let res = await fetch(`${BACKEND_URL}/api/get_recovery_key`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName }) });
         let result = await res.json();
-        if(result.success) document.getElementById("recovery_key_display").innerText = result.key;
-    } catch(e) { document.getElementById("recovery_key_display").innerText = "Error loading key"; }
+        let recKeyDisplay = document.getElementById("recovery_key_display");
+        if(result.success && recKeyDisplay) recKeyDisplay.innerText = result.key;
+    } catch(e) { 
+        let recKeyDisplay = document.getElementById("recovery_key_display");
+        if(recKeyDisplay) recKeyDisplay.innerText = "Error loading key"; 
+    }
 }
 
 function closeSettings() { 
@@ -906,18 +935,23 @@ function closeSettings() {
 }
 
 async function restoreCloud() {
-    let keyInput = document.getElementById("restore_key_input").value.trim();
-    if(!keyInput) return showAlert("Please enter a Recovery Key.", "Notice");
+    let keyInput = document.getElementById("restore_key_input");
+    if(!keyInput) return;
+    let keyVal = keyInput.value.trim();
+    if(!keyVal) return showAlert("Please enter a Recovery Key.", "Notice");
     
-    let btn = event.target.closest('button'); btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> Restoring Data..."; btn.disabled = true;
+    let btn = window.event ? window.event.target.closest('button') : null;
+    if(btn) { btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> Restoring Data..."; btn.disabled = true; }
+    
     try {
-        let res = await fetch(`${BACKEND_URL}/api/restore_cloud`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName, key: keyInput }) });
+        let res = await fetch(`${BACKEND_URL}/api/restore_cloud`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName, key: keyVal }) });
         let result = await res.json();
         if(result.success) {
             closeSettings(); showToast(`<i class='fa-solid fa-check mr-2'></i> Successfully restored ${result.count} files!`, "success"); fetchCloudData(); 
         } else showAlert(result.message || "Invalid Key.", "Error");
-    } catch(e) { showAlert("Restore Failed.", "Error"); }
-    btn.innerHTML = "<i class='fa-solid fa-rotate-left mr-2'></i> Restore Now"; btn.disabled = false;
+    } catch(e) { console.error(e); showAlert("Restore Failed.", "Error"); }
+    
+    if(btn) { btn.innerHTML = "<i class='fa-solid fa-rotate-left mr-2'></i> Restore Now"; btn.disabled = false; }
 }
 
 let alertCloseCallback = null, confirmAlertCallback = null;
@@ -967,23 +1001,29 @@ function closeConfirmAlert() {
 function executeConfirmAction() { closeConfirmAlert(); if (confirmAlertCallback) { confirmAlertCallback(); confirmAlertCallback = null; } }
 
 async function loginWithKey() {
-    let keyInput = document.getElementById("access_key_input").value.trim();
-    if(!keyInput) return showAlert("Please enter your Access Key.", "Notice");
+    let keyInput = document.getElementById("access_key_input");
+    if(!keyInput) return;
+    let keyVal = keyInput.value.trim();
+    if(!keyVal) return showAlert("Please enter your Access Key.", "Notice");
+    
     setLoadingText("Verifying Key..."); switchStep("step-loading");
     try {
-        let res = await fetch(`${BACKEND_URL}/api/login_with_key`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ key: keyInput }) });
+        let res = await fetch(`${BACKEND_URL}/api/login_with_key`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ key: keyVal }) });
         let result = await res.json();
         if(result.success) {
             userName = result.name; localStorage.setItem("temp_uid", userName); setDisplayUsername(); 
-            switchStep("step-success"); if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success"); fetchCloudData(); 
+            switchStep("step-success"); if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("success"); fetchCloudData(); 
         } else { showAlert(result.message, "Login Failed"); switchStep("step-key-login"); }
-    } catch(e) { showAlert("Connection Failed. Please check your internet.", "Error"); switchStep("step-key-login"); }
+    } catch(e) { console.error(e); showAlert("Connection Failed. Please check your internet.", "Error"); switchStep("step-key-login"); }
 }
 
 function copyRecoveryKey() {
-    let keyText = document.getElementById("recovery_key_display").innerText;
+    let recKeyDisplay = document.getElementById("recovery_key_display");
+    if(!recKeyDisplay) return;
+    let keyText = recKeyDisplay.innerText;
+    
     if (keyText && keyText !== "Loading..." && keyText !== "Error loading key") {
-        const showSuccess = () => { showToast("<i class='fa-solid fa-check mr-2'></i> Key Copied to Clipboard!", "success"); if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success"); };
+        const showSuccess = () => { showToast("<i class='fa-solid fa-check mr-2'></i> Key Copied to Clipboard!", "success"); if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("success"); };
         const fallbackCopy = () => {
             let textArea = document.createElement("textarea"); textArea.value = keyText; textArea.setAttribute('readonly', ''); textArea.style.position = "fixed"; textArea.style.left = "-99999px"; textArea.style.top = "-99999px";
             document.body.appendChild(textArea); textArea.focus(); textArea.select();
@@ -1002,9 +1042,11 @@ function updateStorageUI() {
     }
     let displaySize = "0.0 MB"; if (totalMB > 0) displaySize = (totalMB >= 1024) ? ((totalMB / 1024).toFixed(2) + " GB") : (totalMB.toFixed(1) + " MB");
     let storageString = `${displaySize} of Unlimited used`;
+    
     let sidebarText = document.getElementById("sidebar-storage-text"); if (sidebarText) sidebarText.innerText = storageString;
     let settingsText = document.getElementById("settings-storage-text"); if (settingsText) settingsText.innerText = storageString;
-    let visualPercent = Math.max(3, Math.min((totalMB / 1048576) * 100, 85)); document.querySelectorAll('.progress-fill').forEach(el => el.style.width = visualPercent + '%');
+    let visualPercent = Math.max(3, Math.min((totalMB / 1048576) * 100, 85)); 
+    document.querySelectorAll('.progress-fill').forEach(el => el.style.width = visualPercent + '%');
 }
 
 setInterval(async () => {
@@ -1015,7 +1057,8 @@ setInterval(async () => {
             let result = await res.json();
             if (result && !result.exists) {
                 localStorage.removeItem(`cloudData_${userName}`); localStorage.removeItem(`cloudCounts_${userName}`); localStorage.removeItem("temp_uid");
-                tg.HapticFeedback.notificationOccurred("error"); showAlert("လုံခြုံရေးအရ အကောင့်ပိတ်သွားပါသည်။ ပြန်လည် Login ဝင်ပေးပါ။", "Session Terminated", () => { window.location.reload(); });
+                if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("error"); 
+                showAlert("လုံခြုံရေးအရ အကောင့်ပိတ်သွားပါသည်။ ပြန်လည် Login ဝင်ပေးပါ။", "Session Terminated", () => { window.location.reload(); });
             }
         } catch(e) {}
     }
