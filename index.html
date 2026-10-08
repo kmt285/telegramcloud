@@ -109,7 +109,10 @@
                     <button class="btn-refresh" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
                 </header>
                 <div class="content-area">
-                    <h3 class="section-title" id="current-category">My Drive</h3>
+                    <!-- 💡 Breadcrumb Navigation (Windows File Explorer ပုံစံ) -->
+                    <div id="breadcrumb-container" class="breadcrumb-container">
+                        <span class="breadcrumb-current">My Drive</span>
+                    </div>
                     <p id="cloud-status" class="sub-text mb-4">Syncing...</p>
                     <div id="cloud-files-grid" class="file-grid"></div>
                     <div id="load-more-container" class="w-100 flex-center mt-3 hidden">
