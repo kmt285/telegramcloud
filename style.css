@@ -290,6 +290,17 @@ body.selection-active .file-card.selected .select-indicator {
     }
 }
 
+/* 💻 Desktop View Specific Fixes (Storage နေရာ မကွယ်စေရန်) */
+@media (min-width: 769px) {
+    .upload-bar, .selection-bar {
+        position: absolute !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important; 
+    }
+}
+
 /* 💡 Restricted Toggle Button Styles */
 .restrict-toggle-wrapper {
     width: 44px;
