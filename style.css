@@ -325,6 +325,45 @@ body.selection-active .file-card.selected .select-indicator {
 body.selection-active .file-grid.list-view .file-card { padding-left: 45px; transition: padding 0.2s; }
 .file-grid.list-view .select-indicator { top: 50%; transform: translateY(-50%); left: 12px; width: 20px; height: 20px; font-size: 10px; }
 
+/* 💡 Professional Sort Bar Styles */
+.sort-bar {
+    display: flex; 
+    align-items: center; 
+    gap: 24px; 
+    padding: 5px 5px 12px; 
+    margin-bottom: 12px; 
+    border-bottom: 1px solid var(--border-color);
+}
+.sort-item {
+    font-size: 13px; 
+    font-weight: 600; 
+    color: var(--text-muted); 
+    cursor: pointer; 
+    display: flex; 
+    align-items: center; 
+    gap: 6px; 
+    transition: color 0.2s; 
+    user-select: none; 
+    -webkit-user-select: none;
+}
+.sort-item:hover, .sort-item.active { 
+    color: var(--primary-blue); /* ရွေးထားတဲ့ Column ကို အပြာရောင်ပြမည် */
+}
+.sort-item i { 
+    font-size: 11px; 
+    opacity: 0; /* မရွေးရသေးရင် မြှားကိုဖျောက်ထားမည် */
+    transition: transform 0.2s, opacity 0.2s; 
+}
+.sort-item.active i { 
+    opacity: 1; /* ရွေးထားရင် မြှားပေါ်လာမည် */
+}
+.sort-item.asc i { 
+    transform: rotate(180deg); /* အသေးမှအကြီးဆိုရင် မြှားအပေါ်ထောင်မည် */
+}
+.sort-item.desc i { 
+    transform: rotate(0deg); /* အကြီးမှအသေးဆိုရင် မြှားအောက်စိုက်မည် */
+}
+
 /* 📱 Mobile Responsive */
 @media (max-width: 768px) {
     /* 💡 Screen ထက်ကျော်လွန်ပြီး ဘေးသို့ကန်ထွက်ခြင်းကို တားဆီးရန် */
