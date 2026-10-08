@@ -4,6 +4,8 @@ tg.ready();
 
 let currentCategory = 'all'; 
 let currentFolderId = 'root'; // 💡 လက်ရှိရောက်နေသော Folder ID
+let currentSortMode = localStorage.getItem('cloudSortMode') || 'date_desc';
+let isListView = localStorage.getItem('cloudViewMode') === 'list';
 let cloudTotalCounts = {};
 const BACKEND_URL = "https://telegramcloudbackend.onrender.com";
 
@@ -334,11 +336,17 @@ function renderFilesGrid(files) {
         displayFiles = files.filter(f => (f.parent_id || 'root') === currentFolderId);
     }
 
+    // 💡 1. File များကို မပြသမီ ရွေးချယ်ထားသည့်အတိုင်း စီစဉ်ခြင်း
+    displayFiles = sortFilesArray(displayFiles);
+
+    // 💡 2. List View ဟုတ်မဟုတ် စစ်ဆေး၍ Class အတိုးအလျှော့လုပ်ခြင်း
+    let gridContainer = document.getElementById("cloud-files-grid");
+    if (isListView) gridContainer.classList.add("list-view");
+    else gridContainer.classList.remove("list-view");
+
     if(displayFiles.length === 0 && currentFolderId === 'root') {
         html = "<div class='flex-center' style='grid-column: 1 / -1; color: var(--text-muted);'><i class='fa-brands fa-telegram mb-2' style='font-size:40px;'></i><p>Your drive is empty.</p></div>";
     } else {
-        // 💡 ဤနေရာတွင် ရှိနေသော Back Button အဟောင်းကို အပြီးတိုင် ဖျက်ပစ်လိုက်ပါပြီ
-        
         displayFiles.forEach(f => {
             try {
                 let iconClass = "fa-file-lines doc"; 
@@ -392,7 +400,7 @@ function renderFilesGrid(files) {
             } catch (err) {}
         });
     }
-    document.getElementById("cloud-files-grid").innerHTML = html;
+    gridContainer.innerHTML = html;
 }
 // =========================================================
 // 💡 3. DELETE & SHARE FUNCTIONS
@@ -1011,5 +1019,98 @@ function navigateToFolder(folderId) {
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     currentFolderId = folderId;
     renderBreadcrumb();
+    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+}
+
+// =========================================================
+// 💡 SORT & VIEW TOGGLE FUNCTIONS
+// =========================================================
+
+// 1. View ပြောင်းခြင်း
+function toggleView() {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    isListView = !isListView;
+    localStorage.setItem('cloudViewMode', isListView ? 'list' : 'grid');
+    
+    // ခလုတ် Icon ပြောင်းခြင်း
+    let icon = document.getElementById("btn-view-toggle").querySelector("i");
+    icon.className = isListView ? "fa-solid fa-border-all" : "fa-solid fa-list";
+    
+    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+}
+
+// Window load ဖြစ်ချိန်တွင် View Button Icon ကို မှန်ကန်အောင် အစပြုပေးခြင်း
+window.addEventListener('DOMContentLoaded', () => {
+    let icon = document.getElementById("btn-view-toggle").querySelector("i");
+    if(icon) icon.className = isListView ? "fa-solid fa-border-all" : "fa-solid fa-list";
+});
+
+// 2. File Size (1.2 MB, 450 KB) များကို Byte အဖြစ်ပြောင်း၍ တွက်ချက်ပေးသည့် Helper
+function parseSizeToBytes(sizeStr) {
+    if (!sizeStr) return 0;
+    let val = parseFloat(sizeStr);
+    if (isNaN(val)) return 0;
+    if (sizeStr.includes("GB")) return val * 1024 * 1024 * 1024;
+    if (sizeStr.includes("MB")) return val * 1024 * 1024;
+    if (sizeStr.includes("KB")) return val * 1024;
+    return val;
+}
+
+// 3. Array.sort() အသုံးပြု၍ File များကို စီစဉ်ခြင်း
+function sortFilesArray(filesArray) {
+    return filesArray.sort((a, b) => {
+        // Folder များကို အမြဲတမ်း အပေါ်ဆုံးမှာ ထားမည်
+        if (a.type === 'folder' && b.type !== 'folder') return -1;
+        if (a.type !== 'folder' && b.type === 'folder') return 1;
+
+        // Date (အဟောင်း / အသစ်)
+        if (currentSortMode === 'date_desc') return (b.timestamp || 0) - (a.timestamp || 0);
+        if (currentSortMode === 'date_asc') return (a.timestamp || 0) - (b.timestamp || 0);
+        
+        // Name (A-Z / Z-A)
+        let nameA = (a.title || "").toLowerCase();
+        let nameB = (b.title || "").toLowerCase();
+        if (currentSortMode === 'name_asc') return nameA.localeCompare(nameB);
+        if (currentSortMode === 'name_desc') return nameB.localeCompare(nameA);
+        
+        // Size (အကြီး / အသေး)
+        let sizeA = parseSizeToBytes(a.size);
+        let sizeB = parseSizeToBytes(b.size);
+        if (currentSortMode === 'size_desc') return sizeB - sizeA;
+        if (currentSortMode === 'size_asc') return sizeA - sizeB;
+        
+        return 0;
+    });
+}
+
+// 4. Sort Menu ဖွင့်/ပိတ် နှင့် အလုပ်လုပ်စေခြင်း
+function openSortMenu() {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    let overlay = document.getElementById("sort-menu-overlay");
+    overlay.classList.remove("hidden");
+    setTimeout(() => { overlay.classList.add("show"); }, 10);
+    
+    // လက်ရှိရွေးချယ်ထားသော Sort ကို အရောင်ပြောင်းပြခြင်း
+    document.querySelectorAll("#sort-menu-overlay .action-list li").forEach(li => {
+        li.style.color = "var(--text-main)";
+        li.querySelector("i").style.color = "var(--text-muted)";
+    });
+    let activeLi = document.getElementById("sort-opt-" + currentSortMode);
+    if (activeLi) {
+        activeLi.style.color = "var(--primary-blue)";
+        activeLi.querySelector("i").style.color = "var(--primary-blue)";
+    }
+}
+
+function closeSortMenu() {
+    let overlay = document.getElementById("sort-menu-overlay");
+    overlay.classList.remove("show");
+    setTimeout(() => { overlay.classList.add("hidden"); }, 300);
+}
+
+function applySort(mode) {
+    currentSortMode = mode;
+    localStorage.setItem('cloudSortMode', currentSortMode);
+    closeSortMenu();
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
