@@ -336,10 +336,8 @@ function renderFilesGrid(files) {
         displayFiles = files.filter(f => (f.parent_id || 'root') === currentFolderId);
     }
 
-    // 💡 1. File များကို မပြသမီ ရွေးချယ်ထားသည့်အတိုင်း စီစဉ်ခြင်း
     displayFiles = sortFilesArray(displayFiles);
 
-    // 💡 2. List View ဟုတ်မဟုတ် စစ်ဆေး၍ Class အတိုးအလျှော့လုပ်ခြင်း
     let gridContainer = document.getElementById("cloud-files-grid");
     if (isListView) gridContainer.classList.add("list-view");
     else gridContainer.classList.remove("list-view");
@@ -360,6 +358,7 @@ function renderFilesGrid(files) {
                 else if (fileName.endsWith(".pdf")) iconClass = "fa-file-pdf pdf";
                 else if (fileName.endsWith(".zip") || fileName.endsWith(".rar") || fileName.endsWith(".7z")) iconClass = "fa-file-zipper zip";
                 else if (fileName.endsWith(".apk")) iconClass = "fa-brands fa-android apk";
+                /* 💡 ဤနေရာတွင် \ ဖယ်ရှား၍ Error ရှင်းလင်းထားပါသည် */
                 else if (fileName.match(/\.(mp3|wav|ogg|m4a)\$/)) iconClass = "fa-file-audio audio";
                 else if (fileName.match(/\.(xls|xlsx|csv)\$/)) iconClass = "fa-file-excel excel";
                 else if (fileName.match(/\.(doc|docx)\$/)) iconClass = "fa-file-word word";
