@@ -104,6 +104,7 @@
             <main class="main-content">
                 <header class="topbar">
                     <div class="search-bar"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search in Drive..." onkeyup="searchFiles(this.value)"></div>
+                    <button class="btn-refresh" onclick="openCreateFolderModal()"><i class="fa-solid fa-folder-plus"></i></button>
                     <button class="btn-refresh" onclick="fetchCloudData()"><i class="fa-solid fa-rotate-right"></i></button>
                     <button class="btn-refresh" onclick="openSettings()"><i class="fa-solid fa-gear"></i></button>
                 </header>
@@ -123,6 +124,7 @@
                     <div style="display:flex; gap:8px;">
                         <!-- 💡 Rename ခလုတ်အသစ် (ဖိုင် ၁ ခုရွေးမှသာ ပေါ်မည်) -->
                         <button id="btn-rename-action" class="btn-action" style="background:#1a73e8; display:none;" onclick="openRenameModal()"><i class="fa-solid fa-pen"></i> Rename</button>
+                        <button id="btn-move-action" class="btn-action" style="background:#fbbc04; display:none;" onclick="openMoveModal()"><i class="fa-solid fa-folder-tree"></i> Move</button>
                         
                         <button class="btn-action btn-success" onclick="shareSelectedFiles()"><i class="fa-solid fa-share-nodes"></i> Share</button>
                         <button class="btn-action btn-danger" onclick="deleteSelectedFiles()"><i class="fa-solid fa-trash"></i> Delete</button>
@@ -243,6 +245,41 @@
             <div style="display:flex; gap:10px; width:100%;">
                 <button onclick="closeRenameModal()" class="btn-primary w-100" style="background:var(--text-muted); box-shadow:none;">Cancel</button>
                 <button class="btn-primary w-100 btn-glow" style="background:#1a73e8;" onclick="executeRename()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 💡 Create Folder Overlay -->
+    <div id="folder-alert-overlay" class="custom-alert-overlay hidden">
+        <div class="custom-alert-box">
+            <div class="custom-alert-icon" style="color:#fbbc04;">
+                <i class="fa-solid fa-folder-plus"></i>
+            </div>
+            <h3 class="title" style="font-size:18px;">New Folder</h3>
+            <input type="text" id="folder-input" class="input-box mb-4 text-center" placeholder="Enter Folder Name">
+            
+            <div style="display:flex; gap:10px; width:100%;">
+                <button onclick="closeFolderModal()" class="btn-primary w-100" style="background:var(--text-muted); box-shadow:none;">Cancel</button>
+                <button class="btn-primary w-100 btn-glow" style="background:#fbbc04;" onclick="executeCreateFolder()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 💡 Move Files Overlay -->
+    <div id="move-alert-overlay" class="custom-alert-overlay hidden">
+        <div class="custom-alert-box">
+            <div class="custom-alert-icon" style="color:#fbbc04;">
+                <i class="fa-solid fa-folder-tree"></i>
+            </div>
+            <h3 class="title" style="font-size:18px;">Move to Folder</h3>
+            <select id="move-folder-select" class="input-box mb-4 text-center" style="appearance: none;">
+                <option value="root">My Drive (Root)</option>
+                <!-- Folders options များကို JS ဖြင့် Auto ထည့်ပေးမည် -->
+            </select>
+            
+            <div style="display:flex; gap:10px; width:100%;">
+                <button onclick="closeMoveModal()" class="btn-primary w-100" style="background:var(--text-muted); box-shadow:none;">Cancel</button>
+                <button class="btn-primary w-100 btn-glow" style="background:#fbbc04;" onclick="executeMoveFiles()">Move</button>
             </div>
         </div>
     </div>
