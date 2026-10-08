@@ -8,7 +8,14 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", Roboto, Helvetica, sans-serif; }
-body { background: var(--bg-color); color: var(--text-main); height: 100vh; overflow: hidden; }
+body { 
+    background: var(--bg-color); 
+    color: var(--text-main); 
+    height: 100vh; 
+    height: 100dvh; /* 💡 Mobile Browser တွေမှာ အောက်ခြေရောက်မသွားအောင် Fix */
+    min-height: -webkit-fill-available;
+    overflow: hidden; 
+}
 
 .app-container { width: 100%; height: 100%; position: relative; }
 .step { width: 100%; height: 100%; }
@@ -119,6 +126,17 @@ input[type="number"] { -moz-appearance: textfield; }
     position: relative; transition: transform 0.2s, border 0.2s, background 0.2s; border: 2px solid transparent; 
     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
+
+/* 💡 Card အထဲက ပုံနဲ့ စာတွေကို တိုက်ရိုက်ထိလို့မရအောင် (Pointer Events) ပိတ်ထားမည် */
+.file-card img,
+.file-card .fc-icon,
+.file-card .fc-title,
+.file-card .fc-meta {
+    pointer-events: none;
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+}
+
 .file-card:hover { transform: translateY(-2px); }
 
 body.selection-active .file-card.selected { 
@@ -149,12 +167,14 @@ body.selection-active .file-card.selected .select-indicator {
 
 /* 💡 Selection Bar & Actions (Z-index မြှင့်ထားသည်) */
 .selection-bar { 
-    position: absolute; bottom: 0; left: 0; right: 0; 
+    position: fixed; bottom: 0; left: 0; right: 0; 
     background: var(--card-bg); padding: 12px 20px; 
     display: flex; justify-content: space-between; align-items: center; 
     border-top: 1px solid var(--border-color); 
     z-index: 100; /* 💡 ပြင်ဆင်ချက် */
-    box-shadow: 0 -4px 15px rgba(0,0,0,0.05); 
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+    flex-wrap: wrap; /* 💡 နေရာမလောက်ရင် အောက်ဆင်းသွားအောင် */
+    gap: 10px;
 }
 .font-bold { font-weight: 600; font-size: 14px; color: var(--primary-blue); }
 .btn-action { padding: 8px 14px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; color: white; background: var(--text-muted); font-size: 13px; display:flex; align-items:center; gap:6px;}
@@ -164,7 +184,7 @@ body.selection-active .file-card.selected .select-indicator {
 
 /* 💡 Navigation & Inputs (Z-index မြှင့်ထားသည်) */
 .upload-bar { 
-    position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; 
+    position: fixed; bottom: 0; left: 0; right: 0; padding: 15px; 
     background: var(--bg-color); border-top: 1px solid var(--border-color); 
     display: flex; gap: 10px; z-index: 99; /* 💡 ပြင်ဆင်ချက် */
 }
@@ -172,7 +192,7 @@ body.selection-active .file-card.selected .select-indicator {
 .btn-upload { background: var(--primary-blue); border: none; color: white; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 16px; }
 
 .bottom-nav { 
-    display: none; position: absolute; bottom: 0; left: 0; right: 0; 
+    display: none; position: fixed; bottom: 0; left: 0; right: 0; 
     background: var(--bg-color); border-top: 1px solid var(--border-color); 
     justify-content: space-around; padding: 10px 0; z-index: 98; /* 💡 ပြင်ဆင်ချက် */
 }
@@ -214,13 +234,33 @@ body.selection-active .file-card.selected .select-indicator {
 @keyframes popIn { from { bottom: 60px; opacity: 0; } to { bottom: 80px; opacity: 1; } }
 @keyframes fadeOut { to { opacity: 0; bottom: 60px; } }
 
-/* 📱 Mobile Responsive */
+/* 📱 Mobile Responsive ပိုင်း (အောက်ခြေမှာ အစားထိုးရန်) */
 @media (max-width: 768px) {
     .sidebar { display: none !important; }
     .bottom-nav { display: flex; }
     .upload-bar { bottom: 60px; } 
     .content-area { padding-bottom: 140px; }
-    .selection-bar { bottom: 60px; }
+    
+    .selection-bar { 
+        bottom: 60px; 
+        padding: 10px;
+        flex-direction: column; /* 💡 Mobile မှာ အပေါ်အောက်စီရန် */
+        align-items: flex-start;
+    }
+    
+    /* Button များကို ဘေးတိုက် Scroll ဆွဲလို့ရအောင် ပြုလုပ်ခြင်း */
+    .selection-bar > div {
+        width: 100%;
+        overflow-x: auto; 
+        padding-bottom: 5px;
+        display: flex;
+        gap: 8px;
+    }
+    
+    /* Scrollbar အသေးလေးကို ရှင်းလင်းအောင် ဖျောက်ထားခြင်း */
+    .selection-bar > div::-webkit-scrollbar {
+        display: none; 
+    }
 }
 
 /* 💡 Restricted Toggle Button Styles */
