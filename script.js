@@ -60,7 +60,15 @@ window.onload = async () => {
         
         if(result.bot_username) botUsername = result.bot_username;
         
-        if(result.exists) { switchStep("step-success"); fetchCloudData(); } 
+        if(result.exists) { 
+            // PIN ရှိလျှင် PIN စာမျက်နှာကို ပြမည်
+            if(result.has_pin) {
+                switchStep("step-pin");
+            } else {
+                switchStep("step-success"); 
+                fetchCloudData(); 
+            }
+        } 
         else { switchStep("step-phone"); }
     } catch(e) { switchStep("step-phone"); }
 };
@@ -1047,6 +1055,66 @@ function updateStorageUI() {
     let settingsText = document.getElementById("settings-storage-text"); if (settingsText) settingsText.innerText = storageString;
     let visualPercent = Math.max(3, Math.min((totalMB / 1048576) * 100, 85)); 
     document.querySelectorAll('.progress-fill').forEach(el => el.style.width = visualPercent + '%');
+}
+
+
+// =========================================================
+// 💡 SECURITY PIN LOGIC
+// =========================================================
+async function verifyAppPin() {
+    let pin = document.getElementById("app_pin_input").value;
+    if(!pin) return showAlert("PIN ရိုက်ထည့်ပါ။", "Notice");
+    
+    setLoadingText("Unlocking...");
+    switchStep("step-loading");
+    
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/verify_pin`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, pin: pin })
+        });
+        let result = await res.json();
+        
+        if(result.success) {
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+            switchStep("step-success"); 
+            fetchCloudData();
+        } else {
+            showAlert(result.message, "Error");
+            switchStep("step-pin");
+            document.getElementById("app_pin_input").value = "";
+        }
+    } catch(e) {
+        showAlert("Connection Error", "Error");
+        switchStep("step-pin");
+    }
+}
+
+async function setAppPin() {
+    let pin = document.getElementById("new_pin_input").value.trim();
+    let btn = window.event ? window.event.target.closest('button') : null;
+    let oldHtml = "";
+    if (btn) { oldHtml = btn.innerHTML; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true; }
+
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/set_pin`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, pin: pin })
+        });
+        let result = await res.json();
+        if(result.success) {
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+            if(pin === "") showToast("<i class='fa-solid fa-lock-open mr-2'></i> App Lock ကို ပိတ်လိုက်ပါပြီ", "success");
+            else showToast("<i class='fa-solid fa-lock mr-2'></i> PIN အသစ် သတ်မှတ်ပြီးပါပြီ", "success");
+            document.getElementById("new_pin_input").value = "";
+        } else {
+            showToast(result.message || "Failed to set PIN", "error");
+        }
+    } catch(e) { 
+        showToast("Connection Error", "error"); 
+    }
+    
+    if (btn) { btn.innerHTML = oldHtml; btn.disabled = false; }
 }
 
 setInterval(async () => {
