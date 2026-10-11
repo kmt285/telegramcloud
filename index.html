@@ -77,6 +77,18 @@
                     <button onclick="verify2FA()" class="btn-primary w-100 btn-glow">Submit</button>
                 </div>
             </div>
+            <div id="step-pin" class="step hidden flex-center login-wrapper">
+    <div class="auth-card">
+        <div class="login-logo-box" style="background: rgba(142, 36, 170, 0.1); color: #8e24aa;">
+            <i class="fa-solid fa-lock"></i>
+        </div>
+        <h2 class="title">App Lock</h2>
+        <p class="sub-text mb-4">ဆက်လက်ဝင်ရောက်ရန် လုံခြုံရေး PIN ရိုက်ထည့်ပါ။</p>
+        <!-- type="password" အသုံးပြုထား၍ ဂဏန်းများမပေါ်အောင် ကာကွယ်ထားသည် -->
+        <input type="password" id="app_pin_input" placeholder="• • • • • •" class="input-box text-center text-lg mb-4" style="letter-spacing: 5px; font-weight: bold;">
+        <button onclick="verifyAppPin()" class="btn-primary w-100 btn-glow" style="background:#8e24aa;">Unlock App</button>
+    </div>
+</div>
         </div>
 
         <div id="step-success" class="step hidden drive-layout">
@@ -205,6 +217,13 @@
                     </div>
                     
                     <hr style="border-color: var(--border-color); margin: 20px 0;">
+                    
+<h3 class="title" style="font-size:16px;">🔐 Security PIN (App Lock)</h3>
+<p class="sub-text mb-3">Cloud သို့ ဝင်တိုင်းတောင်းမည့် PIN ကို သတ်မှတ်ပါ။ (ဖယ်ရှားလိုပါက အလွတ်ထားပြီး Save ပါ)</p>
+<div style="display:flex; gap:10px; width:100%; margin-bottom: 20px;">
+    <input type="number" id="new_pin_input" placeholder="Enter PIN..." class="input-box text-center">
+    <button onclick="setAppPin()" class="btn-primary" style="background:#8e24aa; white-space:nowrap; padding: 14px 20px;">Save PIN</button>
+</div>
                     
                     <h3 class="title" style="font-size:16px;">♻️ Restore Data</h3>
                     <p class="sub-text mb-3">Enter a Recovery Key from another account to merge.</p>
