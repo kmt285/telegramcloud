@@ -77,16 +77,32 @@
                     <button onclick="verify2FA()" class="btn-primary w-100 btn-glow">Submit</button>
                 </div>
             </div>
-            <div id="step-pin" class="step hidden flex-center login-wrapper">
+            <!-- 💡 PIN ရိုက်ရန် စာမျက်နှာ -->
+<div id="step-pin" class="step hidden flex-center login-wrapper">
     <div class="auth-card">
         <div class="login-logo-box" style="background: rgba(142, 36, 170, 0.1); color: #8e24aa;">
             <i class="fa-solid fa-lock"></i>
         </div>
         <h2 class="title">App Lock</h2>
         <p class="sub-text mb-4">ဆက်လက်ဝင်ရောက်ရန် လုံခြုံရေး PIN ရိုက်ထည့်ပါ။</p>
-        <!-- type="password" အသုံးပြုထား၍ ဂဏန်းများမပေါ်အောင် ကာကွယ်ထားသည် -->
         <input type="password" id="app_pin_input" placeholder="• • • • • •" class="input-box text-center text-lg mb-4" style="letter-spacing: 5px; font-weight: bold;">
         <button onclick="verifyAppPin()" class="btn-primary w-100 btn-glow" style="background:#8e24aa;">Unlock App</button>
+        <!-- 💡 Forgot PIN ခလုတ် -->
+        <p class="toggle-link mt-4" onclick="forgotAppPin()">Forgot PIN?</p>
+    </div>
+</div>
+
+<!-- 💡 Forgot PIN အတည်ပြုမည့် စာမျက်နှာ အသစ် -->
+<div id="step-pin-reset" class="step hidden flex-center login-wrapper">
+    <div class="auth-card">
+        <div class="login-logo-box otp-bg">
+            <i class="fa-solid fa-envelope-open-text"></i>
+        </div>
+        <h2 class="title">Reset PIN</h2>
+        <p class="sub-text mb-4">Telegram (Saved Messages) သို့ ပို့ထားသော 6-digit Code ကို ရိုက်ထည့်ပါ။</p>
+        <input type="number" id="pin_reset_input" placeholder="• • • • • •" class="input-box text-center text-lg mb-4" style="letter-spacing: 5px; font-weight: bold;" oninput="if(this.value.length > 6) this.value = this.value.slice(0, 6);">
+        <button onclick="verifyPinReset()" class="btn-primary w-100 btn-glow">Verify & Reset</button>
+        <p class="toggle-link mt-4" onclick="switchStep('step-pin')">Back to PIN</p>
     </div>
 </div>
         </div>
