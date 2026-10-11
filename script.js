@@ -1117,6 +1117,66 @@ async function setAppPin() {
     if (btn) { btn.innerHTML = oldHtml; btn.disabled = false; }
 }
 
+// =========================================================
+// 💡 FORGOT PIN & OTP VERIFICATION LOGIC
+// =========================================================
+async function forgotAppPin() {
+    setLoadingText("Requesting Reset Code...");
+    switchStep("step-loading");
+    
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/forgot_pin`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName })
+        });
+        let result = await res.json();
+        
+        if(result.success) {
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+            switchStep("step-pin-reset");
+            showToast("Saved Messages သို့ ကုဒ်ပို့ထားပါသည်။", "success");
+        } else {
+            showAlert("Reset Code ပို့ရန် အဆင်မပြေပါ။", "Error");
+            switchStep("step-pin");
+        }
+    } catch(e) {
+        showAlert("Connection Error", "Error");
+        switchStep("step-pin");
+    }
+}
+
+async function verifyPinReset() {
+    let code = document.getElementById("pin_reset_input").value;
+    if(code.length < 5) return showAlert("Code ပြည့်စုံအောင် ရိုက်ထည့်ပါ။", "Notice");
+    
+    setLoadingText("Verifying Code...");
+    switchStep("step-loading");
+    
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/reset_pin_verify`, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, code: code })
+        });
+        let result = await res.json();
+        
+        if(result.success) {
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+            showToast("<i class='fa-solid fa-lock-open mr-2'></i> PIN အား အောင်မြင်စွာ Reset ချလိုက်ပါပြီ။", "success");
+            document.getElementById("pin_reset_input").value = "";
+            
+            // PIN ပြုတ်သွားပြီဖြစ်သဖြင့် Cloud ထဲသို့ တိုက်ရိုက် ဝင်ခွင့်ပေးမည်
+            switchStep("step-success"); 
+            fetchCloudData();
+        } else {
+            showAlert(result.message, "Error");
+            switchStep("step-pin-reset");
+        }
+    } catch(e) {
+        showAlert("Connection Error", "Error");
+        switchStep("step-pin-reset");
+    }
+}
+
 setInterval(async () => {
     let successStep = document.getElementById("step-success");
     if (successStep && !successStep.classList.contains("hidden")) {
