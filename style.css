@@ -407,7 +407,7 @@ body.selection-active .file-grid.list-view .file-card { padding-left: 45px; tran
 .fab-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); opacity: 0; z-index: 1000; pointer-events: none; transition: opacity 0.3s; }
 .fab-overlay.show { opacity: 0.85; pointer-events: auto; }
 .fab-container { position: absolute; bottom: 30px; right: 30px; z-index: 1001; display: flex; flex-direction: column; align-items: flex-end; gap: 15px; }
-.fab-main { width: 56px; height: 56px; border-radius: 16px; background: var(--primary-blue); color: white; border: none; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); font-size: 24px; cursor: pointer; transition: transform 0.2s; display: flex; align-items: center; justify-content: center; }
+.fab-main { width: 56px; height: 56px; border-radius: 50px; background: var(--primary-blue); color: white; border: none; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4); font-size: 24px; cursor: pointer; transition: transform 0.2s; display: flex; align-items: center; justify-content: center; }
 .fab-main:active { transform: scale(0.9); }
 .fab-menu { display: flex; flex-direction: column; gap: 15px; align-items: flex-end; opacity: 0; pointer-events: none; transform: translateY(20px); transition: all 0.2s ease-out; }
 .fab-menu.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
