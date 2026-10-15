@@ -184,71 +184,68 @@ async function verify2FA() {
 
 let currentOffset = 0; 
 
-async function fetchCloudData(isLoadMore = false) {
+let renderLimit = 50;
+let currentVisibleFiles = []; // လက်ရှိ Folder/Search/Category ထဲတွင် မြင်နေရသော ဖိုင်စာရင်း (Select All အတွက်)
+let activeSearchQuery = "";
+
+async function fetchCloudData() {
     let statusText = document.getElementById("cloud-status");
     let grid = document.getElementById("cloud-files-grid");
-    let loadMoreBtn = document.getElementById("btn-load-more");
     let loadMoreContainer = document.getElementById("load-more-container");
     
-    if (!isLoadMore) {
-        currentOffset = 0; 
-        statusText.innerText = "Syncing with Telegram Cloud...";
-        grid.innerHTML = "<div class='flex-center' style='grid-column: 1 / -1;'><div class='modern-spinner'></div></div>";
-        if (loadMoreContainer) loadMoreContainer.classList.add("hidden");
-    } else {
-        if (loadMoreBtn) { loadMoreBtn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> Loading..."; loadMoreBtn.disabled = true; }
-    }
+    renderLimit = 50;
+    statusText.innerText = "Syncing with Telegram Cloud...";
+    grid.innerHTML = "<div class='flex-center' style='grid-column: 1 / -1;'><div class='modern-spinner'></div></div>";
+    if (loadMoreContainer) loadMoreContainer.classList.add("hidden");
     
     try {
         let res = await fetch(`${BACKEND_URL}/api/get_cloud_data`, {
-            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName, offset_id: currentOffset })
+            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName })
         });
         let result = await res.json();
         
         if(result.success) {
-            if (isLoadMore) allFilesData = allFilesData.concat(result.files);
-            else allFilesData = result.files;
-
-            if (result.total_counts && result.total_counts.all !== undefined) {
-                cloudTotalCounts = result.total_counts;
-                localStorage.setItem(`cloudCounts_${userName}`, JSON.stringify(cloudTotalCounts));
-            }
+            allFilesData = result.files || [];
+            cloudTotalCounts = { all: allFilesData.length };
+            
+            localStorage.setItem(`cloudCounts_${userName}`, JSON.stringify(cloudTotalCounts));
             localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
             
             renderBreadcrumb();
             updateCategoryStatus();
             updateStorageUI(); 
-            renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
-
-            if (result.files.length === 50 && result.next_offset) {
-                currentOffset = result.next_offset;
-                if (loadMoreContainer) loadMoreContainer.classList.remove("hidden");
-            } else {
-                if (loadMoreContainer) loadMoreContainer.classList.add("hidden");
-            }
+            refreshCurrentView();
         } else {
             if (result.session_expired) {
-                tg.HapticFeedback.notificationOccurred("error");
+                if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("error");
                 showAlert("လုံခြုံရေးအရ ပိတ်လိုက်ပါပြီ။ ပြန်လည် Login ဝင်ပေးပါ။", "Session Expired", () => {
                     localStorage.removeItem(`cloudData_${userName}`);
                     window.location.reload();
                 }); 
             } else {
-                if (!isLoadMore) statusText.innerText = "Sync failed.";
-                else showToast("Failed to load more files.", "error");
+                statusText.innerText = "Sync failed.";
             }
         }
     } catch(e) { 
-        if (!isLoadMore) statusText.innerText = "Connection error."; 
-        else showToast("Connection error.", "error");
-    }
-
-    if (isLoadMore && loadMoreBtn) {
-        loadMoreBtn.innerHTML = "<i class='fa-solid fa-cloud-arrow-down mr-2'></i> Load More"; loadMoreBtn.disabled = false;
+        statusText.innerText = "Connection error."; 
     }
 }
 
-function loadMoreFiles() { fetchCloudData(true); }
+// Server သို့ ပြန်ခေါ်စရာမလိုဘဲ နောက်ထပ် ဖိုင် (၅၀) ကို ချက်ချင်း ဆွဲထုတ်ပြသမည်
+function loadMoreFiles() {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    renderLimit += 50;
+    refreshCurrentView();
+}
+
+function refreshCurrentView() {
+    if (activeSearchQuery) {
+        let matched = allFilesData.filter(f => (f.title || "").toLowerCase().includes(activeSearchQuery));
+        renderFilesGrid(matched, true);
+    } else {
+        renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory), false);
+    }
+}
 
 function handleTouchStart(e, id) {
     pressTimer = setTimeout(() => {
@@ -286,17 +283,64 @@ function toggleFileSelect(id) {
     if(selectedFiles.includes(id)) selectedFiles = selectedFiles.filter(fid => fid !== id);
     else selectedFiles.push(id);
     
-    let bar = document.getElementById("selection-bar");
-    if(selectedFiles.length > 0) {
-        if (bar) bar.classList.remove("hidden");
-        let countText = document.getElementById("selection-count");
-        if (countText) countText.innerText = `${selectedFiles.length} Selected`;
-    } else {
-        cancelSelection(); 
-    }
-    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+    updateSelectionBarUI();
+    refreshCurrentView();
 }
 
+// ✅ Select All / Deselect All ဖန်ရှင်အသစ်
+function toggleSelectAll() {
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred("medium");
+    if (!currentVisibleFiles || currentVisibleFiles.length === 0) return;
+
+    let visibleIds = currentVisibleFiles.map(f => f.id.toString());
+    let allSelected = visibleIds.every(id => selectedFiles.includes(id));
+
+    if (allSelected) {
+        // အားလုံးရွေးထားပြီးသားဆိုလျှင် အားလုံးပြန်ဖြုတ်မည်
+        selectedFiles = selectedFiles.filter(id => !visibleIds.includes(id));
+    } else {
+        // မရွေးရသေးသော ဖိုင်အားလုံးကို ထည့်ပေါင်းမည်
+        visibleIds.forEach(id => {
+            if (!selectedFiles.includes(id)) selectedFiles.push(id);
+        });
+    }
+
+    updateSelectionBarUI();
+    refreshCurrentView();
+}
+
+function updateSelectionBarUI() {
+    let bar = document.getElementById("selection-bar");
+    let countText = document.getElementById("selection-count");
+    let selectAllIcon = document.getElementById("select-all-icon");
+
+    if (selectedFiles.length > 0) {
+        isSelectionMode = true;
+        document.body.classList.add("selection-active");
+        if (bar) bar.classList.remove("hidden");
+        if (countText) countText.innerText = `${selectedFiles.length} Selected`;
+
+        // လက်ရှိမြင်နေရသော ဖိုင်အားလုံး ရွေးထားပြီးသားဖြစ်လျှင် Icon အရောင်ပြောင်းပြမည်
+        if (selectAllIcon && currentVisibleFiles.length > 0) {
+            let visibleIds = currentVisibleFiles.map(f => f.id.toString());
+            let isAllSelected = visibleIds.every(id => selectedFiles.includes(id));
+            selectAllIcon.style.color = isAllSelected ? "var(--primary-blue)" : "var(--text-main)";
+        }
+    } else {
+        cancelSelection();
+    }
+}
+
+function cancelSelection() {
+    selectedFiles = [];
+    isSelectionMode = false;
+    document.body.classList.remove("selection-active"); 
+    let bar = document.getElementById("selection-bar");
+    if (bar) bar.classList.add("hidden");
+    let selectAllIcon = document.getElementById("select-all-icon");
+    if (selectAllIcon) selectAllIcon.style.color = "var(--text-main)";
+    refreshCurrentView();
+}
 function openMoreMenu() {
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     let overlay = document.getElementById("more-menu-overlay");
@@ -316,15 +360,6 @@ function closeMoreMenu() {
         overlay.classList.remove("show");
         setTimeout(() => overlay.classList.add("hidden"), 300);
     }
-}
-
-function cancelSelection() {
-    selectedFiles = [];
-    isSelectionMode = false;
-    document.body.classList.remove("selection-active"); 
-    let bar = document.getElementById("selection-bar");
-    if (bar) bar.classList.add("hidden");
-    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
 let isFabOpen = false;
@@ -438,17 +473,28 @@ function renderFilesGrid(files, isSearchMode = false) {
         displayFiles = files.filter(f => (f.parent_id || 'root') === currentFolderId);
     }
 
+    // ဖိုင်အားလုံးကို အရင်ဆုံး အတိအကျ Sort စီမည်
     displayFiles = sortFilesArray(displayFiles);
+    currentVisibleFiles = displayFiles; // Select All လုပ်ရန် လက်ရှိဖိုင်အားလုံးကို မှတ်ထားမည်
+
+    // DOM မလေးစေရန် renderLimit (50 စီ) အတိုင်းသာ ဖြတ်ပြီး ပြသမည်
+    let paginatedFiles = displayFiles.slice(0, renderLimit);
+    let loadMoreContainer = document.getElementById("load-more-container");
+    if (loadMoreContainer) {
+        if (displayFiles.length > renderLimit) loadMoreContainer.classList.remove("hidden");
+        else loadMoreContainer.classList.add("hidden");
+    }
+
     let gridContainer = document.getElementById("cloud-files-grid");
     if (!gridContainer) return;
     
     if (isListView) gridContainer.classList.add("list-view");
     else gridContainer.classList.remove("list-view");
 
-    if(displayFiles.length === 0 && currentFolderId === 'root') {
-        html = "<div class='flex-center' style='grid-column: 1 / -1; color: var(--text-muted);'><i class='fa-brands fa-telegram mb-2' style='font-size:40px;'></i><p>Your drive is empty.</p></div>";
+    if(paginatedFiles.length === 0) {
+        html = "<div class='flex-center' style='grid-column: 1 / -1; color: var(--text-muted);'><i class='fa-brands fa-telegram mb-2' style='font-size:40px;'></i><p>No files found.</p></div>";
     } else {
-        displayFiles.forEach(f => {
+        paginatedFiles.forEach(f => {
             try {
                 let iconClass = "fa-file-lines doc"; 
                 let fileName = (f.file_name || f.title || "").toLowerCase();
@@ -459,11 +505,11 @@ function renderFilesGrid(files, isSearchMode = false) {
                 else if (f.type === "link") iconClass = "fa-link link";
                 else if (f.type === "text") iconClass = "fa-note-sticky text";
                 else if (fileName.endsWith(".pdf")) iconClass = "fa-file-pdf pdf";
-                else if (fileName.match(/\.(zip|rar|7z)$/)) iconClass = "fa-file-zipper zip";
+                else if (fileName.match(/\.(zip|rar|7z)\$/)) iconClass = "fa-file-zipper zip";
                 else if (fileName.endsWith(".apk")) iconClass = "fa-brands fa-android apk";
-                else if (fileName.match(/\.(mp3|wav|ogg|m4a)$/)) iconClass = "fa-file-audio audio";
-                else if (fileName.match(/\.(xls|xlsx|csv)$/)) iconClass = "fa-file-excel excel";
-                else if (fileName.match(/\.(doc|docx)$/)) iconClass = "fa-file-word word";
+                else if (fileName.match(/\.(mp3|wav|ogg|m4a)\$/)) iconClass = "fa-file-audio audio";
+                else if (fileName.match(/\.(xls|xlsx|csv)\$/)) iconClass = "fa-file-excel excel";
+                else if (fileName.match(/\.(doc|docx)\$/)) iconClass = "fa-file-word word";
                 
                 let thumbHtml = "";
                 if (f.thumb_file_id) {
@@ -504,6 +550,87 @@ function renderFilesGrid(files, isSearchMode = false) {
     gridContainer.innerHTML = html;
 }
 
+function navigateToFolder(folderId) {
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
+    currentFolderId = folderId;
+    renderLimit = 50;
+    renderBreadcrumb();
+    refreshCurrentView();
+}
+
+function filterFiles(type, element) {
+    currentCategory = type;
+    renderLimit = 50;
+    document.querySelectorAll('.nav-links li, .nav-item').forEach(el => el.classList.remove('active'));
+    if(element) element.classList.add('active');
+    renderBreadcrumb();
+    updateCategoryStatus();
+    refreshCurrentView();
+}
+
+function searchFiles(query) {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+        activeSearchQuery = (query || "").trim().toLowerCase();
+        renderLimit = 50;
+        refreshCurrentView();
+    }, 200);
+}
+
+// 🗑️ Folder နှင့် Subfolder အထပ်ထပ်အောက်ရှိ ဖိုင်အားလုံးကို UI မှ တစ်ခါတည်း ရှင်းထုတ်ပေးသည့် ဖန်ရှင်
+function getAllDescendantIdsLocal(targetIds) {
+    let toDelete = new Set(targetIds.map(id => id.toString()));
+    let added = true;
+    while (added) {
+        added = false;
+        allFilesData.forEach(f => {
+            let fId = f.id ? f.id.toString() : "";
+            let pId = f.parent_id ? f.parent_id.toString() : "";
+            if (pId && toDelete.has(pId) && !toDelete.has(fId)) {
+                toDelete.add(fId);
+                added = true;
+            }
+        });
+    }
+    return toDelete;
+}
+
+async function deleteSelectedFiles() {
+    if(selectedFiles.length === 0) return;
+    showConfirmAlert(`ရွေးချယ်ထားသော ဖိုင် (${selectedFiles.length}) ခုကို ဖျက်ပစ်ရန် သေချာပါသလား?\n\n(Folder ကိုဖျက်ပါက အတွင်းရှိ Subfolder နှင့် ဖိုင်များပါ အပြီးတိုင် ပျက်သွားပါမည်)`, async () => {
+        showToast("<i class='fa-solid fa-spinner fa-spin mr-2'></i> Deleting...", "normal");
+        let idsToDelete = [...selectedFiles];
+        try {
+            let res = await fetch(`${BACKEND_URL}/api/delete_files`, {
+                method: "POST", headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ name: userName, msg_ids: idsToDelete })
+            });
+            let result = await res.json();
+            if(result.success) {
+                if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+                
+                // Folder နှင့် Subfolder အဆင့်ဆင့်အောက်ရှိ ဖိုင်အားလုံးကို ရှာပြီး allFilesData မှ ချက်ချင်းဖယ်ရှားမည်
+                let allRemovedSet = getAllDescendantIdsLocal(idsToDelete);
+                allFilesData = allFilesData.filter(f => !allRemovedSet.has((f.id || "").toString()));
+                cloudTotalCounts.all = allFilesData.length;
+                
+                localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
+                localStorage.setItem(`cloudCounts_${userName}`, JSON.stringify(cloudTotalCounts));
+                
+                showToast(`<i class='fa-solid fa-check mr-2'></i> ဖျက်ပစ်လိုက်ပါပြီ။`, "success");
+                cancelSelection();
+                updateCategoryStatus();
+                updateStorageUI();
+                refreshCurrentView();
+            } else {
+                showToast("<i class='fa-solid fa-xmark mr-2'></i> Failed to delete.", "error");
+            }
+        } catch(e) { 
+            showToast("Connection error.", "error");
+        }
+    });
+}
+
 function renderBreadcrumb() {
     let container = document.getElementById('breadcrumb-container');
     if (!container) return;
@@ -535,13 +662,6 @@ function renderBreadcrumb() {
         else breadcrumbsHtml += `<span class="breadcrumb-item" onclick="navigateToFolder('${safeFolderId}')">${safeFolderTitle}</span>`;
     });
     container.innerHTML = breadcrumbsHtml;
-}
-
-function navigateToFolder(folderId) {
-    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    currentFolderId = folderId;
-    renderBreadcrumb();
-    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
 function openFolder(folderId) { navigateToFolder(folderId); }
@@ -639,30 +759,6 @@ async function executeMoveFiles() {
         }
     } catch(e) { showToast("Connection Error", "error"); }
     if (btn) { btn.innerHTML = oldHtml; btn.disabled = false; }
-}
-
-async function deleteSelectedFiles() {
-    if(selectedFiles.length === 0) return;
-    showConfirmAlert(`ရွေးချယ်ထားသော ဖိုင်များကို ဖျက်ပစ်ရန် သေချာပါသလား?\n\n(Folder ကိုဖျက်ပါက အတွင်းရှိဖိုင်များပါ အပြီးတိုင် ပျက်သွားပါမည်)`, async () => {
-        showToast("<i class='fa-solid fa-spinner fa-spin mr-2'></i> Deleting...", "normal");
-        try {
-            let res = await fetch(`${BACKEND_URL}/api/delete_files`, {
-                method: "POST", headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({ name: userName, msg_ids: selectedFiles })
-            });
-            let result = await res.json();
-            if(result.success) {
-                if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-                showToast(`<i class='fa-solid fa-check mr-2'></i> ဖျက်ပစ်လိုက်ပါပြီ။`, "success");
-                cancelSelection(); 
-                fetchCloudData(); 
-            } else { showToast("<i class='fa-solid fa-xmark mr-2'></i> Failed to delete.", "error"); }
-        } catch(e) { 
-            showToast("Connection error.", "error");
-            cancelSelection(); 
-            fetchCloudData();
-        }
-    });
 }
 
 let currentBaseShareLink = "", isRestrictMode = false;
@@ -795,13 +891,6 @@ async function executeRename() {
     if (btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
 }
 
-function filterFiles(type, element) {
-    currentCategory = type;
-    document.querySelectorAll('.nav-links li, .nav-item').forEach(el => el.classList.remove('active'));
-    if(element) element.classList.add('active');
-    renderBreadcrumb(); updateCategoryStatus();
-    renderFilesGrid(type === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
-}
 
 function updateCategoryStatus() {
     let statusText = document.getElementById("cloud-status");
@@ -814,18 +903,6 @@ function updateCategoryStatus() {
     }
 }
 
-// ⚡ Debounced Search (စာရိုက်နေစဉ် UI မထစ်စေရန် 250ms ခံထားသည်)
-function searchFiles(query) {
-    clearTimeout(searchDebounceTimer);
-    searchDebounceTimer = setTimeout(() => {
-        let lowerQ = (query || "").trim().toLowerCase();
-        if (!lowerQ) {
-            renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory), false);
-            return;
-        }
-        renderFilesGrid(allFilesData.filter(f => (f.title || "").toLowerCase().includes(lowerQ)), true);
-    }, 250);
-}
 
 function goToBotForUpload() {
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("medium");
