@@ -5,7 +5,6 @@ tg.ready();
 let currentCategory = 'all'; 
 let currentFolderId = 'root'; 
 
-// 💡 Professional UI States
 let sortBy = localStorage.getItem('cloudSortBy') || 'date'; 
 let sortOrder = localStorage.getItem('cloudSortOrder') || 'desc'; 
 let isListView = localStorage.getItem('cloudViewMode') === 'list';
@@ -23,6 +22,18 @@ let isSelectionMode = false;
 let selectedFiles = [];
 let pressTimer;
 let justSelected = false;
+let searchDebounceTimer = null;
+
+// 🛡️ XSS ကာကွယ်ရန် HTML Escape Helper
+function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
 function switchStep(stepId) {
     document.querySelectorAll(".step").forEach(el => el.classList.add("hidden"));
@@ -42,7 +53,7 @@ function setDisplayUsername() {
     } else if (userName && !userName.startsWith("Web_Cloud_User_")) {
         displayName = "ID: " + userName; 
     }
-    brandEl.innerHTML = `<i class="fa-brands fa-telegram text-blue"></i> ${displayName}`;
+    brandEl.innerHTML = `<i class="fa-brands fa-telegram text-blue"></i> ${escapeHtml(displayName)}`;
 }
 
 window.onload = async () => {
@@ -57,20 +68,21 @@ window.onload = async () => {
             method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName })
         });
         let result = await res.json();
-        
         if(result.bot_username) botUsername = result.bot_username;
         
         if(result.exists) { 
-            // PIN ရှိလျှင် PIN စာမျက်နှာကို ပြမည်
             if(result.has_pin) {
                 switchStep("step-pin");
             } else {
                 switchStep("step-success"); 
                 fetchCloudData(); 
             }
-        } 
-        else { switchStep("step-phone"); }
-    } catch(e) { switchStep("step-phone"); }
+        } else {
+            switchStep("step-phone");
+        }
+    } catch(e) {
+        switchStep("step-phone");
+    }
 };
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -100,7 +112,7 @@ function handleMobileContact() {
             setTimeout(() => {
                 if(pollingInterval) {
                     clearInterval(pollingInterval);
-                    showAlert("ချိတ်ဆက်မှု ကြန့်ကြာနေပါသည်။ Server ပြန်နိုးနေပါပြီ၊ ထပ်မံကြိုးစားကြည့်ပါ။", "Timeout");
+                    showAlert("ချိတ်ဆက်မှု ကြန့်ကြာနေပါသည်။ ထပ်မံကြိုးစားကြည့်ပါ။", "Timeout");
                     switchStep("step-phone");
                 }
             }, 90000);
@@ -197,7 +209,7 @@ async function fetchCloudData(isLoadMore = false) {
             if (isLoadMore) allFilesData = allFilesData.concat(result.files);
             else allFilesData = result.files;
 
-            if (result.total_counts) {
+            if (result.total_counts && result.total_counts.all !== undefined) {
                 cloudTotalCounts = result.total_counts;
                 localStorage.setItem(`cloudCounts_${userName}`, JSON.stringify(cloudTotalCounts));
             }
@@ -208,11 +220,12 @@ async function fetchCloudData(isLoadMore = false) {
             updateStorageUI(); 
             renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 
-            if (result.files.length > 0 && result.next_offset) {
+            if (result.files.length === 50 && result.next_offset) {
                 currentOffset = result.next_offset;
-                if (result.files.length === 50) { if (loadMoreContainer) loadMoreContainer.classList.remove("hidden"); } 
-                else { if (loadMoreContainer) loadMoreContainer.classList.add("hidden"); }
-            } else { if (loadMoreContainer) loadMoreContainer.classList.add("hidden"); }
+                if (loadMoreContainer) loadMoreContainer.classList.remove("hidden");
+            } else {
+                if (loadMoreContainer) loadMoreContainer.classList.add("hidden");
+            }
         } else {
             if (result.session_expired) {
                 tg.HapticFeedback.notificationOccurred("error");
@@ -226,7 +239,6 @@ async function fetchCloudData(isLoadMore = false) {
             }
         }
     } catch(e) { 
-        console.error("Fetch Error:", e);
         if (!isLoadMore) statusText.innerText = "Connection error."; 
         else showToast("Connection error.", "error");
     }
@@ -238,16 +250,12 @@ async function fetchCloudData(isLoadMore = false) {
 
 function loadMoreFiles() { fetchCloudData(true); }
 
-// =========================================================
-// 💡 SELECTION UX
-// =========================================================
 function handleTouchStart(e, id) {
     pressTimer = setTimeout(() => {
         enterSelectionMode(id);
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred("heavy"); 
     }, 500); 
 }
-
 function handleTouchEnd() { clearTimeout(pressTimer); }
 function handleTouchMove() { clearTimeout(pressTimer); } 
 function handleRightClick(e, id) { e.preventDefault(); enterSelectionMode(id); }
@@ -265,7 +273,6 @@ function enterSelectionMode(id) {
 function handleFileClick(id) {
     if (justSelected) return; 
     let fileObj = allFilesData.find(f => f.id.toString() === id.toString());
-    
     if (isSelectionMode) {
         toggleFileSelect(id); 
     } else {
@@ -276,14 +283,10 @@ function handleFileClick(id) {
 
 function toggleFileSelect(id) {
     id = id.toString();
-    if(selectedFiles.includes(id)) {
-        selectedFiles = selectedFiles.filter(fid => fid !== id);
-    } else {
-        selectedFiles.push(id);
-    }
+    if(selectedFiles.includes(id)) selectedFiles = selectedFiles.filter(fid => fid !== id);
+    else selectedFiles.push(id);
     
     let bar = document.getElementById("selection-bar");
-    
     if(selectedFiles.length > 0) {
         if (bar) bar.classList.remove("hidden");
         let countText = document.getElementById("selection-count");
@@ -299,13 +302,11 @@ function openMoreMenu() {
     let overlay = document.getElementById("more-menu-overlay");
     let title = document.getElementById("bottom-sheet-title");
     let renameBtn = document.getElementById("action-rename");
-    
     if (title) title.innerText = `${selectedFiles.length} item${selectedFiles.length > 1 ? 's' : ''} selected`;
     if (renameBtn) renameBtn.style.display = selectedFiles.length === 1 ? "flex" : "none";
-    
     if(overlay) {
         overlay.classList.remove("hidden");
-        setTimeout(() => { overlay.classList.add("show"); }, 10);
+        setTimeout(() => overlay.classList.add("show"), 10);
     }
 }
 
@@ -313,25 +314,19 @@ function closeMoreMenu() {
     let overlay = document.getElementById("more-menu-overlay");
     if(overlay) {
         overlay.classList.remove("show");
-        setTimeout(() => { overlay.classList.add("hidden"); }, 300);
+        setTimeout(() => overlay.classList.add("hidden"), 300);
     }
 }
 
-// 💡 ဤနေရာတွင် အမှားဖြစ်စေသော (မရှိတော့သည့်) element အဟောင်းများကို ဖယ်ရှားထားပါသည်
 function cancelSelection() {
     selectedFiles = [];
     isSelectionMode = false;
     document.body.classList.remove("selection-active"); 
-    
     let bar = document.getElementById("selection-bar");
     if (bar) bar.classList.add("hidden");
-    
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
-// =========================================================
-// 💡 GOOGLE DRIVE STYLE FAB & SORT LOGIC
-// =========================================================
 let isFabOpen = false;
 function toggleFabMenu() {
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
@@ -339,7 +334,6 @@ function toggleFabMenu() {
     let menu = document.getElementById("fab-menu");
     let overlay = document.getElementById("fab-overlay");
     let mainIcon = document.querySelector("#fab-main-btn i");
-
     if (!menu || !overlay || !mainIcon) return;
 
     if(isFabOpen) {
@@ -357,7 +351,6 @@ function updateSortUI() {
     let labels = { 'name': 'Name', 'date': 'Date', 'size': 'Size' };
     let labelEl = document.getElementById("current-sort-label");
     let iconEl = document.getElementById("current-sort-icon");
-    
     if (labelEl) labelEl.innerText = labels[sortBy];
     if (iconEl) iconEl.className = sortOrder === 'asc' ? "fa-solid fa-arrow-up" : "fa-solid fa-arrow-down";
 
@@ -384,7 +377,7 @@ function openSortMenu() {
     let overlay = document.getElementById("sort-menu-overlay");
     if(overlay) {
         overlay.classList.remove("hidden");
-        setTimeout(() => { overlay.classList.add("show"); }, 10);
+        setTimeout(() => overlay.classList.add("show"), 10);
     }
 }
 
@@ -392,21 +385,16 @@ function closeSortMenu() {
     let overlay = document.getElementById("sort-menu-overlay");
     if(overlay) {
         overlay.classList.remove("show");
-        setTimeout(() => { overlay.classList.add("hidden"); }, 300);
+        setTimeout(() => overlay.classList.add("hidden"), 300);
     }
 }
 
 function applySort(type) {
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    if (sortBy === type) {
-        sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-    } else {
-        sortBy = type;
-        sortOrder = type === 'name' ? 'asc' : 'desc';
-    }
+    if (sortBy === type) sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    else { sortBy = type; sortOrder = type === 'name' ? 'asc' : 'desc'; }
     localStorage.setItem('cloudSortBy', sortBy);
     localStorage.setItem('cloudSortOrder', sortOrder);
-    
     updateSortUI();
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
     closeSortMenu();
@@ -416,7 +404,6 @@ function toggleView() {
     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     isListView = !isListView;
     localStorage.setItem('cloudViewMode', isListView ? 'list' : 'grid');
-    
     let icon = document.getElementById("btn-view-toggle").querySelector("i");
     if (icon) icon.className = isListView ? "fa-solid fa-border-all" : "fa-solid fa-list";
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
@@ -433,39 +420,25 @@ function parseSizeToBytes(sizeStr) {
 }
 
 function sortFilesArray(filesArray) {
-    return filesArray.sort((a, b) => {
+    return [...filesArray].sort((a, b) => {
         if (a.type === 'folder' && b.type !== 'folder') return -1;
         if (a.type !== 'folder' && b.type === 'folder') return 1;
-
         let result = 0;
-        if (sortBy === 'date') {
-            result = (a.timestamp || 0) - (b.timestamp || 0);
-        } else if (sortBy === 'name') {
-            let nameA = (a.title || "").toLowerCase();
-            let nameB = (b.title || "").toLowerCase();
-            result = nameA.localeCompare(nameB);
-        } else if (sortBy === 'size') {
-            let sizeA = parseSizeToBytes(a.size);
-            let sizeB = parseSizeToBytes(b.size);
-            result = sizeA - sizeB;
-        }
+        if (sortBy === 'date') result = (a.timestamp || 0) - (b.timestamp || 0);
+        else if (sortBy === 'name') result = (a.title || "").toLowerCase().localeCompare((b.title || "").toLowerCase());
+        else if (sortBy === 'size') result = parseSizeToBytes(a.size) - parseSizeToBytes(b.size);
         return sortOrder === 'asc' ? result : -result;
     });
 }
 
-// =========================================================
-// 💡 MAIN RENDER (GRID & LIST)
-// =========================================================
-function renderFilesGrid(files) {
+function renderFilesGrid(files, isSearchMode = false) {
     let html = "";
-    
     let displayFiles = files;
-    if (currentCategory === 'all') {
+    if (currentCategory === 'all' && !isSearchMode) {
         displayFiles = files.filter(f => (f.parent_id || 'root') === currentFolderId);
     }
 
     displayFiles = sortFilesArray(displayFiles);
-
     let gridContainer = document.getElementById("cloud-files-grid");
     if (!gridContainer) return;
     
@@ -486,23 +459,23 @@ function renderFilesGrid(files) {
                 else if (f.type === "link") iconClass = "fa-link link";
                 else if (f.type === "text") iconClass = "fa-note-sticky text";
                 else if (fileName.endsWith(".pdf")) iconClass = "fa-file-pdf pdf";
-                else if (fileName.match(/\.(zip|rar|7z)\$/)) iconClass = "fa-file-zipper zip";
+                else if (fileName.match(/\.(zip|rar|7z)$/)) iconClass = "fa-file-zipper zip";
                 else if (fileName.endsWith(".apk")) iconClass = "fa-brands fa-android apk";
-                else if (fileName.match(/\.(mp3|wav|ogg|m4a)\$/)) iconClass = "fa-file-audio audio";
-                else if (fileName.match(/\.(xls|xlsx|csv)\$/)) iconClass = "fa-file-excel excel";
-                else if (fileName.match(/\.(doc|docx)\$/)) iconClass = "fa-file-word word";
+                else if (fileName.match(/\.(mp3|wav|ogg|m4a)$/)) iconClass = "fa-file-audio audio";
+                else if (fileName.match(/\.(xls|xlsx|csv)$/)) iconClass = "fa-file-excel excel";
+                else if (fileName.match(/\.(doc|docx)$/)) iconClass = "fa-file-word word";
                 
                 let thumbHtml = "";
                 if (f.thumb_file_id) {
-                    let imgTag = `<img src="${BACKEND_URL}/api/thumb/${f.thumb_file_id}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`;
+                    let imgTag = `<img src="${BACKEND_URL}/api/thumb/${encodeURIComponent(f.thumb_file_id)}" class="fc-thumb" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid ${iconClass} fc-icon\\'></i>'">`;
                     if (f.type === "video") thumbHtml = `<div class="thumb-wrapper">${imgTag}<div class="video-overlay"><i class="fa-solid fa-play"></i></div></div>`;
                     else thumbHtml = imgTag; 
                 } else {
                     thumbHtml = `<i class="fa-solid ${iconClass} fc-icon"></i>`;
                 }
 
-                let displayTitle = f.title ? f.title : "Unknown File";
-                
+                let safeTitle = escapeHtml(f.title || "Unknown File");
+                let safeId = escapeHtml(f.id);
                 let dateStr = "";
                 if (f.timestamp) {
                     let d = new Date(f.timestamp * 1000);
@@ -515,15 +488,15 @@ function renderFilesGrid(files) {
                 
                 html += `
                 <div class="file-card ${selectedClass}" 
-                     onclick="handleFileClick('${f.id}')"
-                     oncontextmenu="handleRightClick(event, '${f.id}')"
-                     ontouchstart="handleTouchStart(event, '${f.id}')"
+                     onclick="handleFileClick('${safeId}')"
+                     oncontextmenu="handleRightClick(event, '${safeId}')"
+                     ontouchstart="handleTouchStart(event, '${safeId}')"
                      ontouchend="handleTouchEnd()"
                      ontouchmove="handleTouchMove()">
                     <div class="select-indicator"><i class="fa-solid fa-check"></i></div>
                     ${thumbHtml}
-                    <div class="fc-title">${displayTitle}</div>
-                    <div class="fc-meta">${f.size || dateStr}</div>
+                    <div class="fc-title">${safeTitle}</div>
+                    <div class="fc-meta">${escapeHtml(f.size || dateStr)}</div>
                 </div>`;
             } catch (err) {}
         });
@@ -531,9 +504,6 @@ function renderFilesGrid(files) {
     gridContainer.innerHTML = html;
 }
 
-// =========================================================
-// 💡 FOLDER FUNCTIONS
-// =========================================================
 function renderBreadcrumb() {
     let container = document.getElementById('breadcrumb-container');
     if (!container) return;
@@ -558,9 +528,11 @@ function renderBreadcrumb() {
 
     let breadcrumbsHtml = `<span class="breadcrumb-item" onclick="navigateToFolder('root')">${baseTitle}</span>`;
     path.forEach((folder, index) => {
+        let safeFolderTitle = escapeHtml(folder.title);
+        let safeFolderId = escapeHtml(folder.id);
         breadcrumbsHtml += `<i class="fa-solid fa-angle-right breadcrumb-separator"></i>`;
-        if (index === path.length - 1) breadcrumbsHtml += `<span class="breadcrumb-current">${folder.title}</span>`;
-        else breadcrumbsHtml += `<span class="breadcrumb-item" onclick="navigateToFolder('${folder.id}')">${folder.title}</span>`;
+        if (index === path.length - 1) breadcrumbsHtml += `<span class="breadcrumb-current">${safeFolderTitle}</span>`;
+        else breadcrumbsHtml += `<span class="breadcrumb-item" onclick="navigateToFolder('${safeFolderId}')">${safeFolderTitle}</span>`;
     });
     container.innerHTML = breadcrumbsHtml;
 }
@@ -572,12 +544,7 @@ function navigateToFolder(folderId) {
     renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
 }
 
-function openFolder(folderId) {
-    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
-    currentFolderId = folderId;
-    renderBreadcrumb();
-    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
-}
+function openFolder(folderId) { navigateToFolder(folderId); }
 
 function openCreateFolderModal() {
     document.getElementById("folder-input").value = "";
@@ -600,7 +567,6 @@ async function executeCreateFolder() {
     let name = document.getElementById("folder-input").value.trim();
     if (!name) return showToast("ဖိုင်တွဲအမည် ရိုက်ထည့်ပါ။", "error");
     
-    // 💡 Error မဖြစ်စေရန် ပြုပြင်ထားပါသည်
     let btn = window.event ? window.event.target.closest('button') : null;
     let oldHtml = "";
     if (btn) { oldHtml = btn.innerHTML; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true; }
@@ -618,8 +584,7 @@ async function executeCreateFolder() {
             renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
             showToast("<i class='fa-solid fa-check mr-2'></i> Folder ဆောက်ပြီးပါပြီ", "success");
         }
-    } catch(e) { console.error(e); showToast("Connection Error", "error"); }
-    
+    } catch(e) { showToast("Connection Error", "error"); }
     if (btn) { btn.innerHTML = oldHtml; btn.disabled = false; }
 }
 
@@ -630,14 +595,14 @@ function openMoveModal() {
         select.innerHTML = '<option value="root">My Drive (Root)</option>';
         allFilesData.forEach(f => {
             if(f.type === 'folder' && !selectedFiles.includes(f.id.toString())) {
-                select.innerHTML += `<option value="${f.id}">📁 ${f.title}</option>`;
+                select.innerHTML += `<option value="${escapeHtml(f.id)}">📁 ${escapeHtml(f.title)}</option>`;
             }
         });
     }
     let overlay = document.getElementById("move-alert-overlay");
     if(overlay) {
         overlay.classList.remove("hidden");
-        setTimeout(() => { overlay.classList.add("show"); }, 10);
+        setTimeout(() => overlay.classList.add("show"), 10);
     }
 }
 
@@ -652,7 +617,6 @@ function closeMoveModal() {
 async function executeMoveFiles() {
     let selectEl = document.getElementById("move-folder-select");
     let targetId = selectEl ? selectEl.value : 'root';
-    
     let btn = window.event ? window.event.target.closest('button') : null;
     let oldHtml = "";
     if (btn) { oldHtml = btn.innerHTML; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true; }
@@ -673,14 +637,10 @@ async function executeMoveFiles() {
             cancelSelection();
             showToast("<i class='fa-solid fa-check mr-2'></i> ဖိုင်များကို ရွှေ့လိုက်ပါပြီ", "success");
         }
-    } catch(e) { console.error(e); showToast("Connection Error", "error"); }
-    
+    } catch(e) { showToast("Connection Error", "error"); }
     if (btn) { btn.innerHTML = oldHtml; btn.disabled = false; }
 }
 
-// =========================================================
-// 💡 ACTIONS (DELETE, SHARE, RENAME)
-// =========================================================
 async function deleteSelectedFiles() {
     if(selectedFiles.length === 0) return;
     showConfirmAlert(`ရွေးချယ်ထားသော ဖိုင်များကို ဖျက်ပစ်ရန် သေချာပါသလား?\n\n(Folder ကိုဖျက်ပါက အတွင်းရှိဖိုင်များပါ အပြီးတိုင် ပျက်သွားပါမည်)`, async () => {
@@ -692,22 +652,12 @@ async function deleteSelectedFiles() {
             });
             let result = await res.json();
             if(result.success) {
-                if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("success");
+                if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
                 showToast(`<i class='fa-solid fa-check mr-2'></i> ဖျက်ပစ်လိုက်ပါပြီ။`, "success");
-                
-                // 💡 Error မဖြစ်စေရန် ပြုပြင်ထားပါသည်
-                allFilesData = allFilesData.filter(f => {
-                    let fId = f.id ? f.id.toString() : "";
-                    let pId = f.parent_id ? f.parent_id.toString() : "";
-                    return !selectedFiles.includes(fId) && !selectedFiles.includes(pId);
-                });
-                
-                localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
                 cancelSelection(); 
                 fetchCloudData(); 
             } else { showToast("<i class='fa-solid fa-xmark mr-2'></i> Failed to delete.", "error"); }
         } catch(e) { 
-            console.error("Delete Error:", e);
             showToast("Connection error.", "error");
             cancelSelection(); 
             fetchCloudData();
@@ -730,7 +680,7 @@ async function shareSelectedFiles() {
         });
         let result = await res.json();
         if(result.success) {
-            if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("success");
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
             currentBaseShareLink = result.link; 
             let shareInput = document.getElementById("share-link-input");
             if(shareInput) shareInput.value = currentBaseShareLink;
@@ -739,9 +689,8 @@ async function shareSelectedFiles() {
                 overlay.classList.remove("hidden");
                 setTimeout(() => overlay.classList.add("show"), 10);
             }
-        } else { showToast("<i class='fa-solid fa-xmark mr-2'></i> Failed to share.", "error"); }
-    } catch(e) { console.error(e); showToast("Connection error.", "error"); }
-    
+        } else { showToast(`<i class='fa-solid fa-xmark mr-2'></i> ${result.message || 'Failed to share.'}`, "error"); }
+    } catch(e) { showToast("Connection error.", "error"); }
     if(btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
 }
 
@@ -752,12 +701,11 @@ function toggleRestrictMode() {
     if(isRestrictMode) {
         if(icon) icon.className = "fa-solid fa-lock"; 
         if(wrapper) wrapper.classList.add("active");
-        if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     } else {
         if(icon) icon.className = "fa-solid fa-lock-open"; 
         if(wrapper) wrapper.classList.remove("active");
-        if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     }
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     updateShareLinkQuietly();
 }
 
@@ -784,27 +732,16 @@ function closeShareAlert() {
 
 function copyShareLink() {
     let inputEl = document.getElementById("share-link-input");
-    if(!inputEl) return;
-    let keyText = inputEl.value;
-    
-    if (keyText) {
-        const showSuccess = () => {
-            showToast("<i class='fa-solid fa-check mr-2'></i> Link Copied!", "success");
-            if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("success");
-            closeShareAlert(); 
-        };
-        const fallbackCopy = () => {
-            let textArea = document.createElement("textarea");
-            textArea.value = keyText; textArea.setAttribute('readonly', '');
-            textArea.style.position = "fixed"; textArea.style.left = "-99999px"; textArea.style.top = "-99999px";
-            document.body.appendChild(textArea); textArea.focus(); textArea.select();
-            try { if (document.execCommand('copy')) showSuccess(); else showToast("Failed to copy link.", "error"); } 
-            catch (err) { showToast("Failed to copy link.", "error"); }
-            document.body.removeChild(textArea);
-        };
-        if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(keyText).then(showSuccess).catch(err => fallbackCopy()); } 
-        else fallbackCopy();
-    }
+    if(!inputEl || !inputEl.value) return;
+    navigator.clipboard?.writeText(inputEl.value).then(() => {
+        showToast("<i class='fa-solid fa-check mr-2'></i> Link Copied!", "success");
+        closeShareAlert();
+    }).catch(() => {
+        inputEl.select();
+        document.execCommand('copy');
+        showToast("<i class='fa-solid fa-check mr-2'></i> Link Copied!", "success");
+        closeShareAlert();
+    });
 }
 
 function openRenameModal() {
@@ -814,7 +751,6 @@ function openRenameModal() {
     if (fileObj) {
         let renameInput = document.getElementById("rename-input");
         if(renameInput) renameInput.value = fileObj.full_text || fileObj.title || "";
-        
         let overlay = document.getElementById("rename-alert-overlay");
         if(overlay) {
             overlay.classList.remove("hidden");
@@ -849,20 +785,16 @@ async function executeRename() {
         });
         let result = await res.json();
         if (result.success) {
-            if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("success");
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
             showToast("<i class='fa-solid fa-check mr-2'></i> ပြောင်းလဲပြီးပါပြီ", "success");
             let fileIndex = allFilesData.findIndex(f => (f.id ? f.id.toString() : "") === fileId);
             if (fileIndex !== -1) { allFilesData[fileIndex].title = newName; allFilesData[fileIndex].full_text = newName; }
             closeRenameModal(); cancelSelection(); 
         } else showToast("Failed to rename.", "error");
-    } catch(e) { console.error(e); showToast("Connection error.", "error"); }
-    
+    } catch(e) { showToast("Connection error.", "error"); }
     if (btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
 }
 
-// =========================================================
-// 💡 OTHER UTILS
-// =========================================================
 function filterFiles(type, element) {
     currentCategory = type;
     document.querySelectorAll('.nav-links li, .nav-item').forEach(el => el.classList.remove('active'));
@@ -882,9 +814,17 @@ function updateCategoryStatus() {
     }
 }
 
+// ⚡ Debounced Search (စာရိုက်နေစဉ် UI မထစ်စေရန် 250ms ခံထားသည်)
 function searchFiles(query) {
-    let lowerQ = query.toLowerCase();
-    renderFilesGrid(allFilesData.filter(f => (f.title || "").toLowerCase().includes(lowerQ)));
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+        let lowerQ = (query || "").trim().toLowerCase();
+        if (!lowerQ) {
+            renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory), false);
+            return;
+        }
+        renderFilesGrid(allFilesData.filter(f => (f.title || "").toLowerCase().includes(lowerQ)), true);
+    }, 250);
 }
 
 function goToBotForUpload() {
@@ -913,13 +853,13 @@ async function openFile(msgId) {
         });
         let result = await res.json();
         if(result.success) {
-            if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("success");
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
             showToast("<i class='fa-solid fa-check mr-2'></i> Ready! Swipe down to view.", "success");
         } else {
             if (result.message && result.message.includes("Session Terminated")) showAlert(result.message, "Logged Out", () => window.location.reload());
-            else showToast("<i class='fa-solid fa-xmark mr-2'></i> " + (result.message || "Failed to send."), "error");
+            else showToast("<i class='fa-solid fa-xmark mr-2'></i> " + escapeHtml(result.message || "Failed to send."), "error");
         }
-    } catch(e) { console.error(e); showToast("Connection error.", "error"); }
+    } catch(e) { showToast("Connection error.", "error"); }
 }
 
 async function openSettings() {
@@ -957,8 +897,7 @@ async function restoreCloud() {
         if(result.success) {
             closeSettings(); showToast(`<i class='fa-solid fa-check mr-2'></i> Successfully restored ${result.count} files!`, "success"); fetchCloudData(); 
         } else showAlert(result.message || "Invalid Key.", "Error");
-    } catch(e) { console.error(e); showAlert("Restore Failed.", "Error"); }
-    
+    } catch(e) { showAlert("Restore Failed.", "Error"); }
     if(btn) { btn.innerHTML = "<i class='fa-solid fa-rotate-left mr-2'></i> Restore Now"; btn.disabled = false; }
 }
 
@@ -969,11 +908,8 @@ function showAlert(message, title = "Notice", callback = null) {
     let msgEl = document.getElementById("custom-alert-message");
     if(titleEl) titleEl.innerText = title; 
     if(msgEl) msgEl.innerText = message;
-    
     let overlay = document.getElementById("custom-alert-overlay");
-    if(overlay) {
-        overlay.classList.remove("hidden"); setTimeout(() => { overlay.classList.add("show"); }, 10);
-    }
+    if(overlay) { overlay.classList.remove("hidden"); setTimeout(() => overlay.classList.add("show"), 10); }
     if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("warning");
 }
 
@@ -989,21 +925,14 @@ function showConfirmAlert(message, callback) {
     confirmAlertCallback = callback; 
     let msgEl = document.getElementById("confirm-alert-message");
     if(msgEl) msgEl.innerText = message;
-    
     let overlay = document.getElementById("confirm-alert-overlay"); 
-    if(overlay) {
-        overlay.classList.remove("hidden");
-        setTimeout(() => overlay.classList.add("show"), 10); 
-    }
+    if(overlay) { overlay.classList.remove("hidden"); setTimeout(() => overlay.classList.add("show"), 10); }
     if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("warning");
 }
 
 function closeConfirmAlert() {
     let overlay = document.getElementById("confirm-alert-overlay"); 
-    if(overlay) {
-        overlay.classList.remove("show");
-        setTimeout(() => overlay.classList.add("hidden"), 300);
-    }
+    if(overlay) { overlay.classList.remove("show"); setTimeout(() => overlay.classList.add("hidden"), 300); }
 }
 
 function executeConfirmAction() { closeConfirmAlert(); if (confirmAlertCallback) { confirmAlertCallback(); confirmAlertCallback = null; } }
@@ -1020,24 +949,19 @@ async function loginWithKey() {
         let result = await res.json();
         if(result.success) {
             userName = result.name; localStorage.setItem("temp_uid", userName); setDisplayUsername(); 
-            switchStep("step-success"); if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("success"); fetchCloudData(); 
+            switchStep("step-success"); if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success"); fetchCloudData(); 
         } else { showAlert(result.message, "Login Failed"); switchStep("step-key-login"); }
-    } catch(e) { console.error(e); showAlert("Connection Failed. Please check your internet.", "Error"); switchStep("step-key-login"); }
+    } catch(e) { showAlert("Connection Failed.", "Error"); switchStep("step-key-login"); }
 }
 
 function copyRecoveryKey() {
     let recKeyDisplay = document.getElementById("recovery_key_display");
     if(!recKeyDisplay) return;
     let keyText = recKeyDisplay.innerText;
-    
     if (keyText && keyText !== "Loading..." && keyText !== "Error loading key") {
-        const showSuccess = () => { showToast("<i class='fa-solid fa-check mr-2'></i> Key Copied to Clipboard!", "success"); if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("success"); };
-        const fallbackCopy = () => {
-            let textArea = document.createElement("textarea"); textArea.value = keyText; textArea.setAttribute('readonly', ''); textArea.style.position = "fixed"; textArea.style.left = "-99999px"; textArea.style.top = "-99999px";
-            document.body.appendChild(textArea); textArea.focus(); textArea.select();
-            try { if (document.execCommand('copy')) showSuccess(); else showAlert("Failed to copy.", "Error"); } catch (err) { showAlert("Failed to copy.", "Error"); } document.body.removeChild(textArea);
-        };
-        if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(keyText).then(showSuccess).catch(err => fallbackCopy()); } else fallbackCopy();
+        navigator.clipboard?.writeText(keyText).then(() => {
+            showToast("<i class='fa-solid fa-check mr-2'></i> Key Copied to Clipboard!", "success");
+        });
     }
 }
 
@@ -1057,37 +981,24 @@ function updateStorageUI() {
     document.querySelectorAll('.progress-fill').forEach(el => el.style.width = visualPercent + '%');
 }
 
-
-// =========================================================
-// 💡 SECURITY PIN LOGIC
-// =========================================================
 async function verifyAppPin() {
     let pin = document.getElementById("app_pin_input").value;
     if(!pin) return showAlert("PIN ရိုက်ထည့်ပါ။", "Notice");
-    
-    setLoadingText("Unlocking...");
-    switchStep("step-loading");
-    
+    setLoadingText("Unlocking..."); switchStep("step-loading");
     try {
         let res = await fetch(`${BACKEND_URL}/api/verify_pin`, {
             method: "POST", headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ name: userName, pin: pin })
         });
         let result = await res.json();
-        
         if(result.success) {
             if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-            switchStep("step-success"); 
-            fetchCloudData();
+            switchStep("step-success"); fetchCloudData();
         } else {
-            showAlert(result.message, "Error");
-            switchStep("step-pin");
+            showAlert(result.message, "Error"); switchStep("step-pin");
             document.getElementById("app_pin_input").value = "";
         }
-    } catch(e) {
-        showAlert("Connection Error", "Error");
-        switchStep("step-pin");
-    }
+    } catch(e) { showAlert("Connection Error", "Error"); switchStep("step-pin"); }
 }
 
 async function setAppPin() {
@@ -1107,77 +1018,49 @@ async function setAppPin() {
             if(pin === "") showToast("<i class='fa-solid fa-lock-open mr-2'></i> App Lock ကို ပိတ်လိုက်ပါပြီ", "success");
             else showToast("<i class='fa-solid fa-lock mr-2'></i> PIN အသစ် သတ်မှတ်ပြီးပါပြီ", "success");
             document.getElementById("new_pin_input").value = "";
-        } else {
-            showToast(result.message || "Failed to set PIN", "error");
-        }
-    } catch(e) { 
-        showToast("Connection Error", "error"); 
-    }
-    
+        } else showToast(result.message || "Failed to set PIN", "error");
+    } catch(e) { showToast("Connection Error", "error"); }
     if (btn) { btn.innerHTML = oldHtml; btn.disabled = false; }
 }
 
-// =========================================================
-// 💡 FORGOT PIN & OTP VERIFICATION LOGIC
-// =========================================================
 async function forgotAppPin() {
-    setLoadingText("Requesting Reset Code...");
-    switchStep("step-loading");
-    
+    setLoadingText("Requesting Reset Code..."); switchStep("step-loading");
     try {
         let res = await fetch(`${BACKEND_URL}/api/forgot_pin`, {
             method: "POST", headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ name: userName })
         });
         let result = await res.json();
-        
         if(result.success) {
             if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
             switchStep("step-pin-reset");
             showToast("Saved Messages သို့ ကုဒ်ပို့ထားပါသည်။", "success");
-        } else {
-            showAlert("Reset Code ပို့ရန် အဆင်မပြေပါ။", "Error");
-            switchStep("step-pin");
-        }
-    } catch(e) {
-        showAlert("Connection Error", "Error");
-        switchStep("step-pin");
-    }
+        } else { showAlert("Reset Code ပို့ရန် အဆင်မပြေပါ။", "Error"); switchStep("step-pin"); }
+    } catch(e) { showAlert("Connection Error", "Error"); switchStep("step-pin"); }
 }
 
 async function verifyPinReset() {
     let code = document.getElementById("pin_reset_input").value;
     if(code.length < 5) return showAlert("Code ပြည့်စုံအောင် ရိုက်ထည့်ပါ။", "Notice");
-    
-    setLoadingText("Verifying Code...");
-    switchStep("step-loading");
-    
+    setLoadingText("Verifying Code..."); switchStep("step-loading");
     try {
         let res = await fetch(`${BACKEND_URL}/api/reset_pin_verify`, {
             method: "POST", headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ name: userName, code: code })
         });
         let result = await res.json();
-        
         if(result.success) {
             if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
             showToast("<i class='fa-solid fa-lock-open mr-2'></i> PIN အား အောင်မြင်စွာ Reset ချလိုက်ပါပြီ။", "success");
             document.getElementById("pin_reset_input").value = "";
-            
-            // PIN ပြုတ်သွားပြီဖြစ်သဖြင့် Cloud ထဲသို့ တိုက်ရိုက် ဝင်ခွင့်ပေးမည်
-            switchStep("step-success"); 
-            fetchCloudData();
-        } else {
-            showAlert(result.message, "Error");
-            switchStep("step-pin-reset");
-        }
-    } catch(e) {
-        showAlert("Connection Error", "Error");
-        switchStep("step-pin-reset");
-    }
+            switchStep("step-success"); fetchCloudData();
+        } else { showAlert(result.message, "Error"); switchStep("step-pin-reset"); }
+    } catch(e) { showAlert("Connection Error", "Error"); switchStep("step-pin-reset"); }
 }
 
+// 🔋 App ကို ဖွင့်ထားချိန် (Visible) တွင်သာ ६၀ စက္ကန့်တစ်ခါ စစ်ဆေးမည် (Server ဝန်ထုပ်ဝန်ပိုး လျှော့ချရန်)
 setInterval(async () => {
+    if (document.visibilityState !== "visible") return;
     let successStep = document.getElementById("step-success");
     if (successStep && !successStep.classList.contains("hidden")) {
         try {
@@ -1185,9 +1068,9 @@ setInterval(async () => {
             let result = await res.json();
             if (result && !result.exists) {
                 localStorage.removeItem(`cloudData_${userName}`); localStorage.removeItem(`cloudCounts_${userName}`); localStorage.removeItem("temp_uid");
-                if(tg.HapticFeedback && tg.HapticFeedback.notificationOccurred) tg.HapticFeedback.notificationOccurred("error"); 
+                if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("error"); 
                 showAlert("လုံခြုံရေးအရ အကောင့်ပိတ်သွားပါသည်။ ပြန်လည် Login ဝင်ပေးပါ။", "Session Terminated", () => { window.location.reload(); });
             }
         } catch(e) {}
     }
-}, 30000);
+}, 60000);
