@@ -431,7 +431,7 @@ function applySort(type) {
     localStorage.setItem('cloudSortBy', sortBy);
     localStorage.setItem('cloudSortOrder', sortOrder);
     updateSortUI();
-    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+    refreshCurrentView();
     closeSortMenu();
 }
 
@@ -441,7 +441,7 @@ function toggleView() {
     localStorage.setItem('cloudViewMode', isListView ? 'list' : 'grid');
     let icon = document.getElementById("btn-view-toggle").querySelector("i");
     if (icon) icon.className = isListView ? "fa-solid fa-border-all" : "fa-solid fa-list";
-    renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+    refreshCurrentView();
 }
 
 function parseSizeToBytes(sizeStr) {
@@ -505,11 +505,11 @@ function renderFilesGrid(files, isSearchMode = false) {
                 else if (f.type === "link") iconClass = "fa-link link";
                 else if (f.type === "text") iconClass = "fa-note-sticky text";
                 else if (fileName.endsWith(".pdf")) iconClass = "fa-file-pdf pdf";
-                else if (fileName.match(/\.(zip|rar|7z)\$/)) iconClass = "fa-file-zipper zip";
+                else if (fileName.match(/\.(zip|rar|7z)$/)) iconClass = "fa-file-zipper zip";
                 else if (fileName.endsWith(".apk")) iconClass = "fa-brands fa-android apk";
-                else if (fileName.match(/\.(mp3|wav|ogg|m4a)\$/)) iconClass = "fa-file-audio audio";
-                else if (fileName.match(/\.(xls|xlsx|csv)\$/)) iconClass = "fa-file-excel excel";
-                else if (fileName.match(/\.(doc|docx)\$/)) iconClass = "fa-file-word word";
+                else if (fileName.match(/\.(mp3|wav|ogg|m4a)$/)) iconClass = "fa-file-audio audio";
+                else if (fileName.match(/\.(xls|xlsx|csv)$/)) iconClass = "fa-file-excel excel";
+                else if (fileName.match(/\.(doc|docx)$/)) iconClass = "fa-file-word word";
                 
                 let thumbHtml = "";
                 if (f.thumb_file_id) {
@@ -699,9 +699,12 @@ async function executeCreateFolder() {
         let result = await res.json();
         if(result.success) {
             allFilesData.unshift(result.folder);
+            cloudTotalCounts.all = allFilesData.length;
             localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
+            localStorage.setItem(`cloudCounts_${userName}`, JSON.stringify(cloudTotalCounts));
             closeFolderModal();
-            renderFilesGrid(currentCategory === 'all' ? allFilesData : allFilesData.filter(f => f.type === currentCategory));
+            updateCategoryStatus();
+            refreshCurrentView();
             showToast("<i class='fa-solid fa-check mr-2'></i> Folder ဆောက်ပြီးပါပြီ", "success");
         }
     } catch(e) { showToast("Connection Error", "error"); }
@@ -713,8 +716,10 @@ function openMoveModal() {
     let select = document.getElementById("move-folder-select");
     if(select) {
         select.innerHTML = '<option value="root">My Drive (Root)</option>';
+        // ရွေးထားသော Folder နှင့် ၎င်းအောက်ရှိ Subfolder အားလုံးကို ရွှေ့မည့်စာရင်းမှ ချန်လှပ်ထားမည်
+        let excludedIds = getAllDescendantIdsLocal(selectedFiles);
         allFilesData.forEach(f => {
-            if(f.type === 'folder' && !selectedFiles.includes(f.id.toString())) {
+            if(f.type === 'folder' && !excludedIds.has(f.id.toString())) {
                 select.innerHTML += `<option value="${escapeHtml(f.id)}">📁 ${escapeHtml(f.title)}</option>`;
             }
         });
@@ -884,13 +889,18 @@ async function executeRename() {
             if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
             showToast("<i class='fa-solid fa-check mr-2'></i> ပြောင်းလဲပြီးပါပြီ", "success");
             let fileIndex = allFilesData.findIndex(f => (f.id ? f.id.toString() : "") === fileId);
-            if (fileIndex !== -1) { allFilesData[fileIndex].title = newName; allFilesData[fileIndex].full_text = newName; }
-            closeRenameModal(); cancelSelection(); 
+            if (fileIndex !== -1) {
+                allFilesData[fileIndex].title = newName;
+                allFilesData[fileIndex].full_text = newName;
+                localStorage.setItem(`cloudData_${userName}`, JSON.stringify(allFilesData));
+            }
+            renderBreadcrumb();
+            closeRenameModal();
+            cancelSelection(); 
         } else showToast("Failed to rename.", "error");
     } catch(e) { showToast("Connection error.", "error"); }
     if (btn) { btn.innerHTML = originalHtml; btn.disabled = false; }
 }
-
 
 function updateCategoryStatus() {
     let statusText = document.getElementById("cloud-status");
