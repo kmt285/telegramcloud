@@ -423,3 +423,94 @@ body.selection-active .fab-container { display: none; }
 @media (max-width: 768px) {
     .fab-container { position: fixed; bottom: 80px; right: 20px; }
 }
+
+
+/* 🛡️ Account Backup & Ownership Hub Styles */
+.backup-summary-box {
+    width: 100%;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 13px;
+    color: var(--text-main);
+    text-align: left;
+    line-height: 1.6;
+}
+.backup-tabs {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+.backup-tab {
+    flex: 1;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 9px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.backup-tab.active {
+    background: var(--primary-blue);
+    color: #fff;
+    border-color: var(--primary-blue);
+}
+.backup-list-container {
+    width: 100%;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 30px;
+}
+.backup-item-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+.backup-item-info {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    overflow: hidden;
+    flex: 1;
+}
+.backup-item-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.backup-item-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 3px;
+}
+.backup-action-btn {
+    background: var(--primary-blue);
+    color: #fff;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.backup-action-btn.reclaim { background: #fbbc04; color: #000; }
+.backup-action-btn.join { background: #0f9d58; color: #fff; }
