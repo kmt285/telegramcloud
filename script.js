@@ -950,9 +950,10 @@ async function openFile(msgId) {
 }
 
 async function openSettings() {
-    tg.HapticFeedback.impactOccurred("light");
+    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred("light");
     let modal = document.getElementById("settings-modal");
     if(modal) modal.classList.remove("hidden");
+    loadBackupSummary();
     try {
         let res = await fetch(`${BACKEND_URL}/api/get_recovery_key`, { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ name: userName }) });
         let result = await res.json();
@@ -1161,3 +1162,216 @@ setInterval(async () => {
         } catch(e) {}
     }
 }, 60000);
+
+
+// =========================================================
+// 🛡️ ACCOUNT BACKUP & OWNERSHIP RECLAIM FUNCTIONS
+// =========================================================
+let accountBackupData = { owned_chats: [], channels: [], groups: [], contacts: [] };
+let currentBackupTab = "owned";
+
+async function loadBackupSummary() {
+    let box = document.getElementById("backup-summary-text");
+    if (!box) return;
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/get_backup_data`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName })
+        });
+        let result = await res.json();
+        if (result.success && result.backup && result.backup.updated_at) {
+            accountBackupData = result.backup;
+            renderBackupSummaryBox();
+        } else {
+            box.innerHTML = "📭 Backup မလုပ်ရသေးပါ။ <b>Sync & Protect</b> ကိုနှိပ်၍ သိမ်းဆည်းထားပါ။";
+        }
+    } catch (e) {
+        box.innerHTML = "⚠️ Backup အချက်အလက် ဆွဲယူ၍မရပါ။";
+    }
+}
+
+function renderBackupSummaryBox() {
+    let box = document.getElementById("backup-summary-text");
+    if (!box) return;
+    let ownedCount = (accountBackupData.owned_chats || []).length;
+    let chCount = (accountBackupData.channels || []).length;
+    let grpCount = (accountBackupData.groups || []).length;
+    let conCount = (accountBackupData.contacts || []).length;
+    let dStr = accountBackupData.updated_at ? new Date(accountBackupData.updated_at * 1000).toLocaleString() : "";
+
+    box.innerHTML = `
+        <div>👑 <b>Owned / Admin Chats:</b> ${ownedCount} ခု</div>
+        <div>📢 <b>Channels:</b> ${chCount} | 👥 <b>Groups:</b> ${grpCount}</div>
+        <div>👤 <b>Saved Contacts:</b> ${conCount} ဦး</div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">🕒 Last Synced: ${escapeHtml(dStr)}</div>
+    `;
+}
+
+async function syncAccountBackup() {
+    let btn = window.event ? window.event.target.closest('button') : null;
+    let oldHtml = "";
+    if (btn) { oldHtml = btn.innerHTML; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> Syncing..."; btn.disabled = true; }
+    showToast("<i class='fa-solid fa-shield-halved mr-2'></i> Channel, Group, Contact များ သိမ်းဆည်းနေပါသည်...", "normal");
+
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/sync_backup`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, enable_guardian: true })
+        });
+        let result = await res.json();
+        if (result.success) {
+            accountBackupData = result.backup;
+            renderBackupSummaryBox();
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+            showToast("<i class='fa-solid fa-check mr-2'></i> Backup & Channel Shield အောင်မြင်ပါသည်!", "success");
+        } else {
+            showAlert(result.message || "Sync မအောင်မြင်ပါ။", "Error");
+        }
+    } catch (e) {
+        showToast("Connection error.", "error");
+    }
+    if (btn) { btn.innerHTML = oldHtml; btn.disabled = false; }
+}
+
+function openBackupHub() {
+    let modal = document.getElementById("backup-hub-modal");
+    if (modal) modal.classList.remove("hidden");
+    renderBackupList();
+}
+
+function closeBackupHub() {
+    let modal = document.getElementById("backup-hub-modal");
+    if (modal) modal.classList.add("hidden");
+}
+
+function switchBackupTab(tab, el) {
+    currentBackupTab = tab;
+    document.querySelectorAll(".backup-tab").forEach(b => b.classList.remove("active"));
+    if (el) el.classList.add("active");
+    renderBackupList();
+}
+
+function openTelegramUrl(url) {
+    if (!url) return;
+    if (tg.openTelegramLink && url.includes("t.me/")) tg.openTelegramLink(url);
+    else window.open(url, "_blank");
+}
+
+function renderBackupList() {
+    let container = document.getElementById("backup-list-container");
+    if (!container) return;
+    let html = "";
+
+    if (currentBackupTab === "owned") {
+        let list = accountBackupData.owned_chats || [];
+        if (list.length === 0) {
+            container.innerHTML = "<div class='sub-text mt-3'>Owner/Admin ဖြစ်သော Channel သို့မဟုတ် Group မရှိသေးပါ။</div>";
+            return;
+        }
+        list.forEach(item => {
+            let badge = item.role === "owner" ? "👑 Owner" : "🛡️ Admin";
+            let shield = item.guardian ? " | ✅ Bot Shield" : "";
+            let safeLink = escapeHtml(item.link || "");
+            let ownerSess = item.owner_session_id || accountBackupData.restored_from_id || userName;
+            html += `
+                <div class="backup-item-card">
+                    <div class="backup-item-info">
+                        <div class="backup-item-title">${escapeHtml(item.title)}</div>
+                        <div class="backup-item-sub">${badge} (${escapeHtml(item.type)})${shield}</div>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        ${safeLink ? `<button class="backup-action-btn join" onclick="openTelegramUrl('\${safeLink}')">Join</button>` : ""}
+                        <button class="backup-action-btn reclaim" onclick="reclaimChatOwnership('${item.id}', '${safeLink}', '${ownerSess}')">👑 Reclaim</button>
+                    </div>
+                </div>
+            `;
+        });
+    } else if (currentBackupTab === "channels" || currentBackupTab === "groups") {
+        let list = currentBackupTab === "channels" ? (accountBackupData.channels || []) : (accountBackupData.groups || []);
+        if (list.length === 0) {
+            container.innerHTML = "<div class='sub-text mt-3'>သိမ်းဆည်းထားသော စာရင်း မရှိသေးပါ။</div>";
+            return;
+        }
+        list.forEach(item => {
+            let safeLink = escapeHtml(item.link || "");
+            html += `
+                <div class="backup-item-card">
+                    <div class="backup-item-info">
+                        <div class="backup-item-title">${escapeHtml(item.title)}</div>
+                        <div class="backup-item-sub">${item.username ? '@' + escapeHtml(item.username) : 'Private Chat'}</div>
+                    </div>
+                    ${safeLink ? `<button class="backup-action-btn join" onclick="openTelegramUrl('\${safeLink}')">Join / Open</button>` : `<span class="sub-text">No Link</span>`}
+                </div>
+            `;
+        });
+    } else if (currentBackupTab === "contacts") {
+        let list = accountBackupData.contacts || [];
+        if (list.length === 0) {
+            container.innerHTML = "<div class='sub-text mt-3'>သိမ်းဆည်းထားသော Contact မရှိသေးပါ။</div>";
+            return;
+        }
+        list.forEach(c => {
+            let chatLink = c.username ? `https://t.me/${c.username.replace('@', '')}` : (c.phone ? `https://t.me/${c.phone}` : "");
+            html += `
+                <div class="backup-item-card">
+                    <div class="backup-item-info">
+                        <div class="backup-item-title">${escapeHtml(c.name)}</div>
+                        <div class="backup-item-sub">${escapeHtml(c.phone)} ${escapeHtml(c.username)}</div>
+                    </div>
+                    ${chatLink ? `<button class="backup-action-btn" onclick="openTelegramUrl('\${escapeHtml(chatLink)}')">Message</button>` : ""}
+                </div>
+            `;
+        });
+    }
+    container.innerHTML = html;
+}
+
+async function reclaimChatOwnership(chatId, link, ownerSessionId) {
+    let btn = window.event ? window.event.target.closest('button') : null;
+    let oldHtml = "";
+    if (btn) { oldHtml = btn.innerHTML; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true; }
+
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/reclaim_chat`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, chat_id: chatId, link: link, owner_session_id: ownerSessionId })
+        });
+        let result = await res.json();
+        if (result.success) {
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+            showAlert(result.message, "Success 🎉");
+        } else {
+            showAlert(result.message || "Reclaim မအောင်မြင်ပါ။", "Notice");
+        }
+    } catch (e) {
+        showToast("Connection error.", "error");
+    }
+    if (btn) { btn.innerHTML = oldHtml; btn.disabled = false; }
+}
+
+async function exportBackupToChat() {
+    let btn = window.event ? window.event.target.closest('button') : null;
+    let oldHtml = "";
+    if (btn) { oldHtml = btn.innerHTML; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> ပို့နေပါသည်..."; btn.disabled = true; }
+
+    try {
+        let res = await fetch(`${BACKEND_URL}/api/export_backup_chat`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName })
+        });
+        let result = await res.json();
+        if (result.success) {
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+            showToast("<i class='fa-solid fa-check mr-2'></i> Bot Chat သို့ .vcf နှင့် HTML စာရင်း ပို့ပြီးပါပြီ!", "success");
+        } else {
+            showAlert(result.message || "ပို့၍မရပါ။", "Notice");
+        }
+    } catch (e) {
+        showToast("Connection error.", "error");
+    }
+    if (btn) { btn.innerHTML = oldHtml; btn.disabled = false; }
+}
