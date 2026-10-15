@@ -1174,7 +1174,7 @@ async function loadBackupSummary() {
     let box = document.getElementById("backup-summary-text");
     if (!box) return;
     try {
-        let res = await fetch(`${BACKEND_URL}/api/get_backup_data`, {
+        let res = await fetch(BACKEND_URL + "/api/get_backup_data", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ name: userName })
@@ -1200,12 +1200,11 @@ function renderBackupSummaryBox() {
     let conCount = (accountBackupData.contacts || []).length;
     let dStr = accountBackupData.updated_at ? new Date(accountBackupData.updated_at * 1000).toLocaleString() : "";
 
-    box.innerHTML = `
-        <div>👑 <b>Owned / Admin Chats:</b> ${ownedCount} ခု</div>
-        <div>📢 <b>Channels:</b> ${chCount} | 👥 <b>Groups:</b> ${grpCount}</div>
-        <div>👤 <b>Saved Contacts:</b> ${conCount} ဦး</div>
-        <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">🕒 Last Synced: ${escapeHtml(dStr)}</div>
-    `;
+    box.innerHTML =
+        "<div>👑 <b>Owned / Admin Chats:</b> " + ownedCount + " ခု</div>" +
+        "<div>📢 <b>Channels:</b> " + chCount + " | 👥 <b>Groups:</b> " + grpCount + "</div>" +
+        "<div>👤 <b>Saved Contacts:</b> " + conCount + " ဦး</div>" +
+        "<div style='font-size:11px; color:var(--text-muted); margin-top:4px;'>🕒 Last Synced: " + escapeHtml(dStr) + "</div>";
 }
 
 async function syncAccountBackup() {
@@ -1215,7 +1214,7 @@ async function syncAccountBackup() {
     showToast("<i class='fa-solid fa-shield-halved mr-2'></i> Channel, Group, Contact များ သိမ်းဆည်းနေပါသည်...", "normal");
 
     try {
-        let res = await fetch(`${BACKEND_URL}/api/sync_backup`, {
+        let res = await fetch(BACKEND_URL + "/api/sync_backup", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ name: userName, enable_guardian: true })
@@ -1253,10 +1252,64 @@ function switchBackupTab(tab, el) {
     renderBackupList();
 }
 
+// 🔗 Telegram App အတွင်း၌ပင် Channel / Chat သို့ တိုက်ရိုက်ပွင့်စေမည့် Function
 function openTelegramUrl(url) {
     if (!url) return;
-    if (tg.openTelegramLink && url.includes("t.me/")) tg.openTelegramLink(url);
-    else window.open(url, "_blank");
+    url = url.trim();
+    if (url.startsWith("@")) {
+        url = "https://t.me/" + url.substring(1);
+    } else if (url.startsWith("+") && !url.startsWith("http")) {
+        url = "https://t.me/" + url;
+    }
+    if (tg && tg.openTelegramLink && (url.startsWith("https://t.me/") || url.startsWith("http://t.me/"))) {
+        tg.openTelegramLink(url);
+    } else if (tg && tg.openLink) {
+        tg.openLink(url);
+    } else {
+        window.open(url, "_blank");
+    }
+}
+
+// 🚀 Join နှိပ်လျှင် Backend မှ Auto-Join လုပ်ပေးပြီး Telegram Channel သို့ တန်းပို့ပေးမည်
+async function joinAndOpenChat(idx, listType) {
+    let list = listType === "owned" ? (accountBackupData.owned_chats || []) :
+               (listType === "channels" ? (accountBackupData.channels || []) : (accountBackupData.groups || []));
+    let item = list[idx];
+    if (!item) return;
+
+    let btn = window.event ? window.event.target.closest('button') : null;
+    let oldHtml = "";
+    if (btn) { oldHtml = btn.innerHTML; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true; }
+
+    try {
+        let res = await fetch(BACKEND_URL + "/api/join_backup_chat", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name: userName, chat_id: item.id, link: item.link || "" })
+        });
+        let result = await res.json();
+        let targetLink = (result && result.open_link) ? result.open_link : (item.link || "");
+        if (targetLink) {
+            openTelegramUrl(targetLink);
+        } else {
+            showToast("Joined successfully!", "success");
+        }
+    } catch (e) {
+        if (item.link) openTelegramUrl(item.link);
+    }
+    if (btn) { btn.innerHTML = oldHtml; btn.disabled = false; }
+}
+
+function openContactChat(idx) {
+    let c = (accountBackupData.contacts || [])[idx];
+    if (!c) return;
+    if (c.username) {
+        openTelegramUrl("https://t.me/" + c.username.replace("@", ""));
+    } else if (c.phone) {
+        let cleanPhone = c.phone.replace(/\s+/g, "");
+        if (!cleanPhone.startsWith("+")) cleanPhone = "+" + cleanPhone;
+        openTelegramUrl("https://t.me/" + cleanPhone);
+    }
 }
 
 function renderBackupList() {
@@ -1270,23 +1323,20 @@ function renderBackupList() {
             container.innerHTML = "<div class='sub-text mt-3'>Owner/Admin ဖြစ်သော Channel သို့မဟုတ် Group မရှိသေးပါ။</div>";
             return;
         }
-        list.forEach(item => {
+        list.forEach((item, idx) => {
             let badge = item.role === "owner" ? "👑 Owner" : "🛡️ Admin";
             let shield = item.guardian ? " | ✅ Bot Shield" : "";
-            let safeLink = escapeHtml(item.link || "");
-            let ownerSess = item.owner_session_id || accountBackupData.restored_from_id || userName;
-            html += `
-                <div class="backup-item-card">
-                    <div class="backup-item-info">
-                        <div class="backup-item-title">${escapeHtml(item.title)}</div>
-                        <div class="backup-item-sub">${badge} (${escapeHtml(item.type)})${shield}</div>
-                    </div>
-                    <div style="display:flex; gap:6px;">
-                        ${safeLink ? `<button class="backup-action-btn join" onclick="openTelegramUrl('\${safeLink}')">Join</button>` : ""}
-                        <button class="backup-action-btn reclaim" onclick="reclaimChatOwnership('${item.id}', '${safeLink}', '${ownerSess}')">👑 Reclaim</button>
-                    </div>
-                </div>
-            `;
+            html +=
+                "<div class='backup-item-card'>" +
+                    "<div class='backup-item-info'>" +
+                        "<div class='backup-item-title'>" + escapeHtml(item.title) + "</div>" +
+                        "<div class='backup-item-sub'>" + badge + " (" + escapeHtml(item.type) + ")" + shield + "</div>" +
+                    "</div>" +
+                    "<div style='display:flex; gap:6px;'>" +
+                        "<button class='backup-action-btn join' onclick='joinAndOpenChat(" + idx + ", \"owned\")'>Join</button>" +
+                        "<button class='backup-action-btn reclaim' onclick='reclaimChatOwnership(" + idx + ")'>👑 Reclaim</button>" +
+                    "</div>" +
+                "</div>";
         });
     } else if (currentBackupTab === "channels" || currentBackupTab === "groups") {
         let list = currentBackupTab === "channels" ? (accountBackupData.channels || []) : (accountBackupData.groups || []);
@@ -1294,17 +1344,19 @@ function renderBackupList() {
             container.innerHTML = "<div class='sub-text mt-3'>သိမ်းဆည်းထားသော စာရင်း မရှိသေးပါ။</div>";
             return;
         }
-        list.forEach(item => {
-            let safeLink = escapeHtml(item.link || "");
-            html += `
-                <div class="backup-item-card">
-                    <div class="backup-item-info">
-                        <div class="backup-item-title">${escapeHtml(item.title)}</div>
-                        <div class="backup-item-sub">${item.username ? '@' + escapeHtml(item.username) : 'Private Chat'}</div>
-                    </div>
-                    ${safeLink ? `<button class="backup-action-btn join" onclick="openTelegramUrl('\${safeLink}')">Join / Open</button>` : `<span class="sub-text">No Link</span>`}
-                </div>
-            `;
+        list.forEach((item, idx) => {
+            let subInfo = item.username ? ("@" + escapeHtml(item.username)) : "Private Chat";
+            let actionBtn = item.link
+                ? "<button class='backup-action-btn join' onclick='joinAndOpenChat(" + idx + ", \"" + currentBackupTab + "\")'>Join / Open</button>"
+                : "<span class='sub-text'>No Link</span>";
+            html +=
+                "<div class='backup-item-card'>" +
+                    "<div class='backup-item-info'>" +
+                        "<div class='backup-item-title'>" + escapeHtml(item.title) + "</div>" +
+                        "<div class='backup-item-sub'>" + subInfo + "</div>" +
+                    "</div>" +
+                    actionBtn +
+                "</div>";
         });
     } else if (currentBackupTab === "contacts") {
         let list = accountBackupData.contacts || [];
@@ -1312,37 +1364,51 @@ function renderBackupList() {
             container.innerHTML = "<div class='sub-text mt-3'>သိမ်းဆည်းထားသော Contact မရှိသေးပါ။</div>";
             return;
         }
-        list.forEach(c => {
-            let chatLink = c.username ? `https://t.me/${c.username.replace('@', '')}` : (c.phone ? `https://t.me/${c.phone}` : "");
-            html += `
-                <div class="backup-item-card">
-                    <div class="backup-item-info">
-                        <div class="backup-item-title">${escapeHtml(c.name)}</div>
-                        <div class="backup-item-sub">${escapeHtml(c.phone)} ${escapeHtml(c.username)}</div>
-                    </div>
-                    ${chatLink ? `<button class="backup-action-btn" onclick="openTelegramUrl('\${escapeHtml(chatLink)}')">Message</button>` : ""}
-                </div>
-            `;
+        list.forEach((c, idx) => {
+            let hasChat = Boolean(c.username || c.phone);
+            let msgBtn = hasChat
+                ? "<button class='backup-action-btn' onclick='openContactChat(" + idx + ")'>Message</button>"
+                : "";
+            html +=
+                "<div class='backup-item-card'>" +
+                    "<div class='backup-item-info'>" +
+                        "<div class='backup-item-title'>" + escapeHtml(c.name) + "</div>" +
+                        "<div class='backup-item-sub'>" + escapeHtml(c.phone || "") + " " + escapeHtml(c.username || "") + "</div>" +
+                    "</div>" +
+                    msgBtn +
+                "</div>";
         });
     }
     container.innerHTML = html;
 }
 
-async function reclaimChatOwnership(chatId, link, ownerSessionId) {
+async function reclaimChatOwnership(idx) {
+    let item = (accountBackupData.owned_chats || [])[idx];
+    if (!item) return;
+
     let btn = window.event ? window.event.target.closest('button') : null;
     let oldHtml = "";
     if (btn) { oldHtml = btn.innerHTML; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; btn.disabled = true; }
 
+    let ownerSess = item.owner_session_id || accountBackupData.restored_from_id || userName;
+
     try {
-        let res = await fetch(`${BACKEND_URL}/api/reclaim_chat`, {
+        let res = await fetch(BACKEND_URL + "/api/reclaim_chat", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ name: userName, chat_id: chatId, link: link, owner_session_id: ownerSessionId })
+            body: JSON.stringify({
+                name: userName,
+                chat_id: item.id,
+                link: item.link || "",
+                owner_session_id: ownerSess
+            })
         });
         let result = await res.json();
         if (result.success) {
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-            showAlert(result.message, "Success 🎉");
+            showAlert(result.message, "Success 🎉", () => {
+                if (result.open_link) openTelegramUrl(result.open_link);
+            });
         } else {
             showAlert(result.message || "Reclaim မအောင်မြင်ပါ။", "Notice");
         }
@@ -1358,7 +1424,7 @@ async function exportBackupToChat() {
     if (btn) { oldHtml = btn.innerHTML; btn.innerHTML = "<i class='fa-solid fa-spinner fa-spin mr-2'></i> ပို့နေပါသည်..."; btn.disabled = true; }
 
     try {
-        let res = await fetch(`${BACKEND_URL}/api/export_backup_chat`, {
+        let res = await fetch(BACKEND_URL + "/api/export_backup_chat", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ name: userName })
