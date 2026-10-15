@@ -248,6 +248,24 @@
                     <p class="sub-text mb-3">Enter a Recovery Key from another account to merge.</p>
                     <input type="text" id="restore_key_input" placeholder="Cloud-XXXX-XXXX" class="input-box text-center mb-3" autocomplete="off">
                     <button onclick="restoreCloud()" class="btn-primary w-100" style="background:#4CAF50;"><i class="fa-solid fa-rotate-left mr-2"></i> Restore Now</button>
+
+                    <hr style="border-color: var(--border-color); margin: 20px 0; width: 100%;">
+
+                    <h3 class="title" style="font-size:16px;">🛡️ Account Backup & Ownership Shield</h3>
+                    <p class="sub-text mb-3" style="text-align:left;">Channel, Group, Contact များကို သိမ်းဆည်းပြီး သင်ပိုင်ဆိုင်သော Channel/Group များတွင် အကောင့်ပျက်သွားပါက အကောင့်သစ်ဖြင့် Admin/Owner ပြန်ယူနိုင်ရန် ကာကွယ်ထားပေးသည်။</p>
+                    
+                    <div class="backup-summary-box mb-3" id="backup-summary-text">
+                        Loading backup status...
+                    </div>
+
+                    <div style="display:flex; gap:10px; width:100%; margin-bottom:10px;">
+                        <button onclick="syncAccountBackup()" class="btn-primary w-100" style="background:#1a73e8; font-size:14px; padding:12px;">
+                            <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Sync & Protect
+                        </button>
+                        <button onclick="openBackupHub()" class="btn-primary w-100" style="background:#0f9d58; font-size:14px; padding:12px;">
+                            <i class="fa-solid fa-folder-tree mr-2"></i> View & Reclaim
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -371,6 +389,32 @@
                     <i class="fa-solid fa-folder-tree"></i> Move
                 </li>
             </ul>
+        </div>
+    </div>
+
+
+    <!-- 🛡️ Account Backup & Reclaim Hub Modal -->
+    <div id="backup-hub-modal" class="settings-modal hidden" style="z-index: 2100;">
+        <div class="settings-container">
+            <div class="settings-header">
+                <h2 style="font-size:18px;"><i class="fa-solid fa-shield-heart text-blue"></i> Backup & Ownership Hub</h2>
+                <button class="btn-icon" onclick="closeBackupHub()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div style="display:flex; gap:8px; width:100%; margin-bottom:15px;">
+                <button onclick="exportBackupToChat()" class="btn-primary w-100" style="background:#8e24aa; font-size:13px; padding:10px;">
+                    <i class="fa-solid fa-file-export mr-2"></i> Bot Chat သို့ (.vcf & Links) ပို့မည်
+                </button>
+            </div>
+
+            <div class="backup-tabs">
+                <button class="backup-tab active" onclick="switchBackupTab('owned', this)">👑 Owned/Admin</button>
+                <button class="backup-tab" onclick="switchBackupTab('channels', this)">📢 Channels</button>
+                <button class="backup-tab" onclick="switchBackupTab('groups', this)">👥 Groups</button>
+                <button class="backup-tab" onclick="switchBackupTab('contacts', this)">👤 Contacts</button>
+            </div>
+
+            <div id="backup-list-container" class="backup-list-container"></div>
         </div>
     </div>
     
