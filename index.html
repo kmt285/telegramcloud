@@ -159,13 +159,16 @@
                     </div>
                 </div>
 
-                <!-- 💡 Selection Bar -->
+                <!-- 💡 Selection Bar (Select All ခလုတ် ပါဝင်ပြီး) -->
                 <div id="selection-bar" class="selection-bar hidden">
                     <div class="selection-left">
-                        <button class="btn-icon-only" onclick="cancelSelection()"><i class="fa-solid fa-xmark"></i></button>
+                        <button class="btn-icon-only" onclick="cancelSelection()" title="Cancel"><i class="fa-solid fa-xmark"></i></button>
                         <span id="selection-count" class="font-bold" style="font-size: 16px;">0 Selected</span>
                     </div>
                     <div class="selection-right">
+                        <button class="btn-icon-only" onclick="toggleSelectAll()" title="Select All">
+                            <i id="select-all-icon" class="fa-solid fa-check-double"></i>
+                        </button>
                         <button class="btn-icon-only" onclick="shareSelectedFiles()" title="Share"><i class="fa-solid fa-share-nodes"></i></button>
                         <button class="btn-icon-only text-danger" onclick="deleteSelectedFiles()" title="Delete"><i class="fa-solid fa-trash"></i></button>
                         <button class="btn-icon-only" onclick="openMoreMenu()" title="More Options"><i class="fa-solid fa-ellipsis-vertical"></i></button>
